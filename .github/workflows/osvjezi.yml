@@ -1,0 +1,50 @@
+name: Osvježi podatke
+
+on:
+  schedule:
+    - cron: "17 8 * * 1-5"    # 9:17 zimi / 10:17 ljeti (NAV od jučer)
+    - cron: "23 17 * * 1-5"   # 18:23 zimi / 19:23 ljeti (nakon zatvaranja ZSE-a)
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["pipeline/**", ".github/workflows/**"]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: osvjezi
+  cancel-in-progress: false
+
+jobs:
+  osvjezi:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Dohvat i izračun
+        run: python pipeline/run.py
+      - name: Spremi podatke
+        run: |
+          git config user.name "koei-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/data data
+          git diff --cached --quiet && exit 0
+          git commit -m "Podaci $(date -u +%Y-%m-%dT%H:%MZ)"
+          for i in 1 2 3; do
+            git pull --rebase -X theirs origin "$GITHUB_REF_NAME" && git push && exit 0
+            sleep 10
+          done
+          exit 1
+      - name: Obavijest (ntfy)
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          APP_URL: ${{ vars.APP_URL }}
+        run: |
+          if [ -n "$NTFY_TOPIC" ] && [ -s data/obavijest.txt ]; then
+            curl -s -H "Title: KOEI mirovinci" -H "Tags: chart_with_upwards_trend" ${APP_URL:+-H "Click: $APP_URL"} \
+                 --data-binary @data/obavijest.txt "https://ntfy.sh/$NTFY_TOPIC" > /dev/null
+          fi

@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="hr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>KOEI limit mirovinaca</title>
+<meta name="description" content="Dnevno praćenje udjela Končara (KOEI) u obveznim mirovinskim fondovima prema limitu od 5 % NAV-a.">
+<meta name="theme-color" content="#1F2429">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="KOEI limit">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="bar">
+  <div class="bar-in">
+    <div class="ticker">
+      <span class="sym">KOEI</span>
+      <span class="px" id="px">–</span>
+      <span class="chg" id="chg"></span>
+    </div>
+    <div class="upd" id="upd">učitavanje…</div>
+  </div>
+</header>
+
+<main id="app" aria-busy="true">
+  <section class="hero" aria-labelledby="h1">
+    <h1 id="h1">Učitavanje podataka</h1>
+    <p class="lede" id="lede"></p>
+    <div class="totals" id="totals"></div>
+  </section>
+
+  <section class="limit" aria-labelledby="h-limit">
+    <div class="sec-hd">
+      <h2 id="h-limit">Udio KOEI u neto imovini fondova B</h2>
+      <p class="note" id="limit-note"></p>
+    </div>
+    <div class="gauges" id="gauges" role="list"></div>
+  </section>
+
+  <section aria-labelledby="h-calc" class="calc">
+    <div class="sec-hd">
+      <h2 id="h-calc">Što ako se cijena promijeni</h2>
+      <p class="note">Pomakni cijenu i vidi koliko bi fondovi B morali prodati da se vrate na 5 %.</p>
+    </div>
+    <div class="calc-in">
+      <label for="slider" class="calc-price"><span id="calc-px">–</span><small id="calc-delta"></small></label>
+      <input type="range" id="slider" min="900" max="1600" step="1" aria-describedby="calc-out">
+      <div class="calc-scale"></div>
+      <div id="calc-out" class="calc-out" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-chart">
+    <div class="sec-hd">
+      <h2 id="h-chart">Kretanje udjela</h2>
+      <p class="note">Dnevno, od studenoga 2025. Okomite crte su objave rezultata Končara; u tri ciklusa 2026. PBZ CO je počeo prodavati 0–1 dan nakon objave.</p>
+    </div>
+    <div class="range" role="group" aria-label="Razdoblje grafa">
+      <button type="button" data-r="90" aria-pressed="false">3 mj.</button>
+      <button type="button" data-r="180" aria-pressed="true">6 mj.</button>
+      <button type="button" data-r="9999" aria-pressed="false">sve</button>
+    </div>
+    <div class="chart" id="chart"></div>
+    <div class="legend" id="legend"></div>
+  </section>
+
+  <section aria-labelledby="h-ev" class="two">
+    <div>
+      <div class="sec-hd"><h2 id="h-ev">Tko je prodavao</h2>
+        <p class="note">Promjene pozicija po datumu trgovanja. SKDD ih pokazuje 2 radna dana kasnije.</p></div>
+      <ol class="events" id="events"></ol>
+    </div>
+    <div>
+      <div class="sec-hd"><h2 id="h-blk">Blok transakcije</h2>
+        <p class="note">Najnoviji iz zadnjih 120 dana. Prodavatelj se iz burze ne vidi.</p></div>
+      <table class="tbl" id="blocks"></table>
+      <div class="sec-hd" style="margin-top:28px"><h2>Kalendar</h2></div>
+      <ul class="cal" id="cal"></ul>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-a">
+    <div class="sec-hd"><h2 id="h-a">Ostali fondovi</h2>
+      <p class="note">Fondovi A imaju isti limit od 5 %. Fondovi C (limit 3 %) prema zadnjim izvješćima ne drže KOEI.</p></div>
+    <table class="tbl" id="others"></table>
+  </section>
+
+  <section aria-labelledby="h-m" class="method">
+    <details>
+      <summary><h2 id="h-m">Kako se računa i odakle su podaci</h2></summary>
+      <div class="method-in" id="method"></div>
+    </details>
+  </section>
+</main>
+
+<footer class="foot" id="foot"></footer>
+<div class="tip" id="tip" role="tooltip" hidden></div>
+<script src="app.js"></script>
+</body>
+</html>
