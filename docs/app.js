@@ -37,11 +37,11 @@ function render(D) {
   const k = D.koei;
 
   // traka
-  $("#px").textContent = eur(k.vwap, 2);
-  const ch = k.vwap / k.prethodni_vwap - 1;
+  $("#px").textContent = D.koei_uzivo ? eur(D.koei_uzivo.zadnja, 2) : eur(k.vwap, 2);
+  const ch = D.koei_uzivo ? D.koei_uzivo.zadnja / k.zadnja - 1 : k.vwap / k.prethodni_vwap - 1;
   const chg = $("#chg"); chg.textContent = (ch >= 0 ? "+" : "") + pct(ch, 1); chg.className = "chg " + (ch < 0 ? "dn" : "up");
   const gen = new Date(D.generirano);
-  $("#upd").innerHTML = `VWAP ${dt(k.datum)}<br>osvježeno ${gen.getDate()}. ${gen.getMonth() + 1}. u ${gen.toLocaleTimeString("hr-HR", { hour: "2-digit", minute: "2-digit" })}`;
+  $("#upd").innerHTML = `${D.koei_uzivo ? `cijena u ${D.koei_uzivo.vrijeme}` : `VWAP ${dt(k.datum)}`}<br>osvježeno ${gen.getDate()}. ${gen.getMonth() + 1}. u ${gen.toLocaleTimeString("hr-HR", { hour: "2-digit", minute: "2-digit" })}`;
 
   // hero
   const navDate = B.map((f) => f.nav_date).sort().pop() || k.datum;
@@ -70,10 +70,13 @@ function render(D) {
   if (D.moguca_podjela) warn.push("Cijena KOEI promijenila se u jednom danu više od 50 % – moguća podjela dionica; brojke treba provjeriti.");
   if (warn.length) $(".hero").insertAdjacentHTML("beforeend", `<div class="warn">${warn.map(esc).join(" ")}</div>`);
   const tiles = [["", fmt(D.ukupno.visak49), `ako se spuste na 4,9 % kao PBZ CO u prosincu 2025.`]];
-  if (k.datum > navDate) tiles.push(["", fmt(today.t5), `uz cijenu od ${dt(k.datum)} (${eur(k.vwap, 2)})`]);
+  const L = D.koei_uzivo;
+  if (L) tiles.push(["", fmt(scenario(L.zadnja).t5), `uz cijenu sada (${dt(L.datum)} u ${L.vrijeme}: ${eur(L.zadnja, 2)})`]);
+  else if (k.datum > navDate) tiles.push(["", fmt(today.t5), `uz VWAP od ${dt(k.datum)} (${eur(k.vwap, 2)})`]);
   tiles.push(["", fmt(D.ukupno.visak5 / D.likvidnost.adv20.dionica, 0) + " dana", `ukupnog dnevnog prometa KOEI (${fmt(D.likvidnost.adv20.dionica)} dionica dnevno)`]);
   $("#totals").innerHTML = over.length ? tiles.map(([c, b, s]) => `<div class="tot ${c}"><b>${b}</b><span>${s}</span></div>`).join("") : "";
 
+  renderPrices(D, B);
   renderGauges(B);
   initCalc();
   renderChart(180);
@@ -83,6 +86,43 @@ function render(D) {
   renderOthers(D);
   renderMethod(D);
   $("#foot").innerHTML = `Osobni alat za praćenje, ne savjet za ulaganje. Izvori: ZSE, SKDD (preko MojeDionice), NAV sa stranica AZ, Erste Plavi, PBZ CO i Raiffeisen, obavijesti PBZ CO (do 3. 11. 2026.). Podaci kasne 1–2 radna dana.`;
+}
+
+// ---------------------------------------------------------------- količine po cijeni
+function renderPrices(D, B) {
+  const k = D.koei, L = D.koei_uzivo;
+  const hold = B.filter((f) => f.dionica > 0 && f.prag_cijena && f.prag_cijena < 3 * f.vwap).sort((a, b) => a.prag_cijena - b.prag_cijena);
+  const navDate = B.map((f) => f.nav_date).sort().pop();
+  if (!hold.length) { $("#ladder").innerHTML = ""; return; }
+  const min = hold[0];
+  const cur = L ? L.zadnja : k.zadnja;
+  const state = cur < min.prag_cijena ? `Uz sadašnju cijenu (${eur(cur, 2)}) nitko ne mora prodavati.`
+    : `Uz sadašnju cijenu (${eur(cur, 2)}) prodaju ${hold.filter((f) => cur >= f.prag_cijena).map((f) => NAME[f.id]).join(" i ")}.`;
+  $("#ladder").innerHTML = `<p class="floor">Ispod <b>${eur(min.prag_cijena, 1)}</b> nitko ne mora prodavati.</p>
+    <ol class="steps">${hold.map((f) => `<li><span>od <b>${eur(f.prag_cijena, 1)}</b></span><span>prodaje ${NAME[f.id]}</span></li>`).join("")}</ol>
+    <p class="state">${state}</p>`;
+  $("#px-note").textContent = `Količine do 5 % NAV-a po fondu. Pozicije su sve prodaje koje SKDD već pokazuje, a NAV je od ${dt(navDate, true)}; tablica se osvježava svaki sat tijekom trgovanja.`;
+  // sažeta tablica (~8 redaka): pragovi fondova, sadašnja cijena i okrugle cijene po 50 € između; ostalo na klik
+  const curRow = L ? { c: L.zadnja, t: `sada (${L.vrijeme})`, cls: "now" } : { c: k.zadnja, t: `zadnja zaključna (${dt(k.datum)})`, cls: "now" };
+  const special = [curRow, ...hold.map((f) => ({ c: f.prag_cijena, t: `ovdje počinje ${NAME[f.id]}`, cls: "trig" }))];
+  const far = (c) => special.every((r) => Math.abs(r.c - c) > 15);
+  const top = Math.max(cur, hold.at(-1).prag_cijena) + 100;
+  const grid50 = [], grid25 = [];
+  for (let c = Math.ceil(min.prag_cijena / 50) * 50; c <= top; c += 50) if (far(c)) grid50.push({ c, t: "", cls: "" });
+  for (let c = Math.floor(min.prag_cijena * 0.97 / 25) * 25; c <= top + 50; c += 25) if (far(c) && c % 50) grid25.push({ c, t: "", cls: "extra" });
+  const rows = [...special, ...grid50, ...grid25].sort((a, b) => a.c - b.c);
+  const ids = ["PBZ_B", "ER_B", "AZ_B"].filter((id) => B.some((f) => f.id === id));
+  $("#pxtbl").innerHTML = `<thead><tr><th>Cijena</th>${ids.map((id) => `<th>${NAME[id]}</th>`).join("")}<th>Ukupno</th><th>mil. €</th><th>do 4,9 %</th></tr></thead><tbody>` +
+    rows.map((r) => {
+      const s = scenario(r.c), by = Object.fromEntries(s.rows.map((x) => [x.id, x.n5]));
+      return `<tr class="${r.cls}"${r.cls === "extra" ? " hidden" : ""}><td><b>${eur(r.c, r.t ? 2 : 0)}</b>${r.t ? `<small>${esc(r.t)}</small>` : ""}</td>${ids.map((id) => `<td>${by[id] ? fmt(by[id]) : "–"}</td>`).join("")}<td><b>${s.t5 ? fmt(s.t5) : "0"}</b></td><td>${s.t5 ? fmt(s.t5 * r.c / 1e6, 1) : "–"}</td><td>${s.t49 ? fmt(s.t49) : "–"}</td></tr>`;
+    }).join("") + "</tbody>";
+  if (!$("#px-more")) {
+    const btn = document.createElement("button"); btn.id = "px-more"; btn.className = "more"; btn.type = "button"; btn.textContent = "Prikaži cijene po 25 €";
+    btn.onclick = () => { document.querySelectorAll("#pxtbl tr.extra").forEach((tr) => (tr.hidden = !tr.hidden)); btn.textContent = btn.textContent.includes("Prikaži") ? "Sakrij cijene po 25 €" : "Prikaži cijene po 25 €"; };
+    $("#pxtbl").closest(".tbl-wrap").after(btn);
+  }
+  $("#px-foot").textContent = "Fond prodaje samo kad mu je udio iznad 5 %. Za sve cijene vrijedi isti NAV ostatka portfelja; NAV raste samo s vrijednošću vlastite pozicije KOEI. Fondovi vrednuju KOEI po dnevnom VWAP-u, pa je stvarni prag dana onaj po VWAP-u.";
 }
 
 // ---------------------------------------------------------------- mjerila
@@ -115,7 +155,7 @@ function renderGauges(B) {
         ${i === 0 ? `<span class="line5-lbl" style="left:${x(LIM)}%">5 %</span>` : ""}
       </div>
       <div class="g-facts">${facts.join("")}</div>
-      <div class="g-src">Pozicija na dan trgovanja ${dt(f.dionica_trg, true)}${f.dionica_tocno ? "" : " (procjena)"}, ${src}. ${chg} NAV od ${dt(f.nav_date, true)}${f.nav_procjena ? " – procjena prema kretanju ostalih fondova (stranica društva nije dohvaćena)" : ""}.</div>
+      <div class="g-src">Pozicija na dan trgovanja ${dt(f.dionica_trg, true)}${f.dionica_tocno ? "" : " (procjena)"}, ${src}. ${chg} NAV od ${dt(f.nav_date, true)}${f.nav_procjena ? " – procjena prema kretanju ostalih fondova (stranica društva nije dohvaćena)." : ""}</div>
     </div>`;
   }).join("");
 }

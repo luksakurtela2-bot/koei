@@ -80,9 +80,10 @@ def hr(x, dec=0):
 
 
 # ================================================================ 1. dohvat
-def update(status):
+def update(status, quick=False):
+    """quick=True: samo cijene (satno osvježavanje tijekom trgovanja); NAV i SKDD ostaju iz zadnjeg punog osvježavanja."""
     today = date.today().isoformat()
-    for sym in ("KOEI", "KODT", "KODT2"):
+    for sym in (("KOEI",) if quick else ("KOEI", "KODT", "KODT2")):
         try:
             rows = S.zse_history(sym, "2023-01-01", today)
             old = read_csv(D / f"zse_{sym}.csv")
@@ -93,6 +94,8 @@ def update(status):
             status[f"ZSE {sym}"] = "ok"
         except Exception as e:
             status[f"ZSE {sym}"] = f"greška: {e}"
+    if quick:
+        return []
     nav = {(r["datum"], r["fond"]): r["nav_eur"] for r in read_csv(D / "nav.csv")}
     frm = (date.today() - timedelta(days=45)).isoformat()
     down = set()
@@ -193,11 +196,14 @@ def estimate_missing_nav(NAV, days, max_gap=10):
 def compute(status):
     shares_out = {k: v * sf(k, "0000") for k, v in SHARES_OUT_0.items()}
     zg = zagreb_now(); today = zg.date().isoformat(); before_close = zg.hour * 60 + zg.minute < 16 * 60 + 45
-    px = {}
+    px, live = {}, None
     for sym in ("KOEI", "KODT", "KODT2"):
         ct, blk = {}, []
         for r in read_csv(D / f"zse_{sym}.csv"):
             if before_close and r["date"] == today:
+                if sym == "KOEI" and r["model"] == "CT" and r["last"] not in ("", "None"):
+                    live = dict(datum=today, zadnja=float(r["last"]) / sf(sym, today), vwap=float(r["vwap"]) / sf(sym, today),
+                                dionica=float(r["volume"]) * sf(sym, today), vrijeme=zg.strftime("%H:%M"))
                 continue                                  # dnevni VWAP još nije konačan
             k = sf(sym, r["date"])
             if r["model"] == "BLOCK":
@@ -340,7 +346,7 @@ def compute(status):
         ukupno=dict(visak5=sum(fx["visak5"] for fx in B), visak49=sum(fx["visak49"] for fx in B),
                     eur5=sum(fx["visak5"] * fx["vwap"] for fx in B), eur49=sum(fx["visak49"] * fx["vwap"] for fx in B),
                     fondova_iznad=sum(1 for fx in funds if fx["status"] == "iznad")),
-        fondovi=funds, scenariji=scen, povijest=hist,
+        koei_uzivo=live, fondovi=funds, scenariji=scen, povijest=hist,
         likvidnost=dict(adv20=adv(20), adv60=adv(60), adv250=adv(250),
                         blokovi_ytd=sum(b["dionica"] for b in BLK if b["date"] >= f"{last[:4]}-01-01")),
         blokovi=blocks[:40], dogadaji=events, top10=t10,
@@ -400,7 +406,12 @@ if __name__ == "__main__":
         if old and old.get("top10"):
             status["_top10"] = old["top10"]
     else:
-        new_h = update(status)
+        quick = "--brzo" in sys.argv
+        if quick and old:     # zadrži stanje ostalih izvora iz zadnjeg punog osvježavanja
+            status.update({k: v for k, v in old.get("izvori_status", {}).items() if not k.startswith("ZSE KOEI")})
+            if old.get("top10"):
+                status["_top10"] = old["top10"]
+        new_h = update(status, quick=quick)
     data = compute(status)
     json.dump(data, open(OUT / "latest.json", "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
     msgs = alerts(data, old, new_h)
