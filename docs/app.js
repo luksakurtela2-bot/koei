@@ -43,25 +43,27 @@ function render(D) {
   const gen = new Date(D.generirano);
   $("#upd").innerHTML = `${D.koei_uzivo ? `cijena u ${D.koei_uzivo.vrijeme}` : `VWAP ${dt(k.datum)}`}<br>osvježeno ${gen.getDate()}. ${gen.getMonth() + 1}. u ${gen.toLocaleTimeString("hr-HR", { hour: "2-digit", minute: "2-digit" })}`;
 
-  // hero
+  // hero – po zadnjoj cijeni (tijekom trgovanja "sada", inače zadnja zaključna); NAV ostatka portfelja s zadnjeg datuma
   const navDate = B.map((f) => f.nav_date).sort().pop() || k.datum;
-  const today = scenario(k.vwap);
-  const lagF = over.filter((f) => f.dionica_trg && f.dionica_trg < f.nav_date);
-  const najv = lagF.length ? "najviše " : "";
-  const top = B.slice().sort((a, b) => b.udio - a.udio)[0];
+  const L = D.koei_uzivo;
+  const pc = L ? L.zadnja : k.zadnja;
+  const pcLbl = L ? `cijenu sada (${L.vrijeme}, ${eur(pc, 2)})` : `zadnju zaključnu cijenu (${dt(k.datum)}, ${eur(pc, 2)})`;
+  const S0 = scenario(pc);
+  const sellers = S0.rows.filter((x) => x.n5 > 0).sort((a, b) => b.n5 - a.n5);
+  const lagF = B.filter((f) => f.dionica_trg && f.dionica_trg < f.nav_date && f.status === "iznad");
+  const lagD = lagF.length ? lagF.map((f) => f.dionica_trg).sort()[0] : null;
   const az = B.find((f) => f.id === "AZ_B");
-  // naslov = odgovor na pitanje "koliko KOEI moraju prodati"
-  $("#h1").innerHTML = over.length
-    ? `Mirovinci moraju prodati ${najv}<span class="big">${fmt(D.ukupno.visak5)}</span> dionica KOEI`
-    : "Trenutno nijedan fond ne mora prodavati KOEI";
-  const rows = over.sort((a, b) => b.visak5 - a.visak5).map((f) =>
-    `<li><span>${NAME[f.id]}</span><b>${fmt(f.visak5)}</b><small>${mil(f.visak5 * f.vwap)}, udio ${pct(f.udio)}</small></li>`);
-  if (az && az.status !== "iznad") rows.push(`<li class="zero"><span>AZ B</span><b>0</b><small>počinje prodavati tek iznad ${eur(az.prag_cijena, 1)}</small></li>`);
-  $("#lede").innerHTML = (over.length
-    ? `<p>Toliko trebaju prodati da im KOEI padne na 5 % neto imovine fonda, što je zakonski limit. To je ${mil(D.ukupno.eur5)} ili ${pct(D.ukupno.visak5 / D.shares_out, 1)} Končara.</p>`
-    : top ? `<p>Najbliži limitu je ${NAME[top.id]} s ${pct(top.udio)} neto imovine u KOEI.</p>` : "")
+  const minPrag = Math.min(...B.filter((f) => f.dionica > 0 && f.prag_cijena).map((f) => f.prag_cijena));
+  $("#h1").innerHTML = sellers.length
+    ? `Uz ${L ? "cijenu sada" : "zadnju cijenu"} mirovinci moraju prodati još <span class="big">${fmt(S0.t5)}</span> dionica KOEI`
+    : "Uz zadnju cijenu nijedan fond ne mora prodavati KOEI";
+  const rows = sellers.map((x) => `<li><span>${NAME[x.id]}</span><b>${fmt(x.n5)}</b><small>${mil(x.n5 * pc)}, udio ${pct(x.w)}</small></li>`);
+  if (az && !sellers.some((x) => x.id === "AZ_B")) rows.push(`<li class="zero"><span>AZ B</span><b>0</b><small>počinje prodavati tek iznad ${eur(az.prag_cijena, 1)}</small></li>`);
+  $("#lede").innerHTML = (sellers.length
+    ? `<p>To je najmanje koliko trebaju prodati da im KOEI padne na 5 % neto imovine fonda (zakonski limit), uz ${pcLbl}: ${mil(S0.t5 * pc)} ili ${pct(S0.t5 / D.shares_out, 1)} Končara. Ako se spuste na 4,9 %, kao PBZ CO u prosincu 2025., to je ${fmt(S0.t49)} dionica.</p>`
+    : `<p>Ispod ${eur(minPrag, 1)} nitko ne mora prodavati; zadnja cijena je ${eur(pc, 2)}.</p>`)
     + `<ul class="split">${rows.join("")}</ul>`
-    + `<p class="small">Izračun prema NAV-u od ${dt(navDate, true)}${lagF.length ? ` i pozicijama iz SKDD-a za trgovine do ${dt(lagF.map((f) => f.dionica_trg).sort()[0], true)}; prodaje nakon toga još se ne vide, pa je broj gornja granica` : ""}.</p>`;
+    + `<p class="small">NAV fondova od ${dt(navDate, true)}; pozicije iz SKDD-a${lagD ? ` za trgovine do ${dt(lagD, true)} Ako su fondovi prodavali nakon toga, to se još ne vidi (SKDD kasni 2 radna dana) i ostatak je manji.` : "."} Broj se mijenja s cijenom – tablica ispod.</p>`;
   const ageH = (Date.now() - new Date(D.generirano)) / 36e5;
   const staleNav = B.filter((f) => f.nav_date < navDate && !f.id.startsWith("PBZ")).map((f) => `${NAME[f.id]} (${dt(f.nav_date)})`);
   const warn = [];
@@ -69,12 +71,12 @@ function render(D) {
   if (staleNav.length) warn.push(`Stariji NAV: ${staleNav.join(", ")}.`);
   if (D.moguca_podjela) warn.push("Cijena KOEI promijenila se u jednom danu više od 50 % – moguća podjela dionica; brojke treba provjeriti.");
   if (warn.length) $(".hero").insertAdjacentHTML("beforeend", `<div class="warn">${warn.map(esc).join(" ")}</div>`);
-  const tiles = [["", fmt(D.ukupno.visak49), `ako se spuste na 4,9 % kao PBZ CO u prosincu 2025.`]];
-  const L = D.koei_uzivo;
-  if (L) tiles.push(["", fmt(scenario(L.zadnja).t5), `uz cijenu sada (${dt(L.datum)} u ${L.vrijeme}: ${eur(L.zadnja, 2)})`]);
-  else if (k.datum > navDate) tiles.push(["", fmt(today.t5), `uz VWAP od ${dt(k.datum)} (${eur(k.vwap, 2)})`]);
-  tiles.push(["", fmt(D.ukupno.visak5 / D.likvidnost.adv20.dionica, 0) + " dana", `ukupnog dnevnog prometa KOEI (${fmt(D.likvidnost.adv20.dionica)} dionica dnevno)`]);
-  $("#totals").innerHTML = over.length ? tiles.map(([c, b, s]) => `<div class="tot ${c}"><b>${b}</b><span>${s}</span></div>`).join("") : "";
+  const tiles = [
+    ["", eur(minPrag, 1), "ispod te cijene nitko ne mora prodavati"],
+    ["", az ? eur(az.prag_cijena, 1) : "–", "iznad te cijene prodaje i AZ B (398 tis. dionica)"],
+    ["", fmt(S0.t5 / D.likvidnost.adv20.dionica, 0) + " dana", `ukupnog dnevnog prometa KOEI (${fmt(D.likvidnost.adv20.dionica)} dionica dnevno)`],
+  ];
+  $("#totals").innerHTML = tiles.map(([c, b, s]) => `<div class="tot ${c}"><b>${b}</b><span>${s}</span></div>`).join("");
 
   renderPrices(D, B);
   renderGauges(B);
@@ -134,7 +136,7 @@ function renderGauges(B) {
     const fill = Math.min(f.udio, LIM), extra = Math.max(0, f.udio - LIM);
     const facts = [];
     if (f.status === "iznad") {
-      facts.push(`<span class="x">višak <b>${fmt(f.visak5)}</b> dionica (${mil(f.visak5 * f.vwap)})</span>`);
+      facts.push(`<span class="x">višak <b>${fmt(f.visak5)}</b> dionica uz VWAP ${dt(f.nav_date)} (${eur(f.vwap, 2)})</span>`);
       facts.push(`<span>iznad od <b>${f.iznad_od_pocetak_povijesti ? "≤ " : ""}${dt(f.iznad_od)}</b>, ${f.iznad_dana} trg. dana</span>`);
       const rani = f.rok_3m_rani && f.rok_3m_rani !== f.rok_3m ? dt(f.rok_3m_rani) + "–" : "";
       facts.push(`<span>rok ~<b>${rani}${dt(f.rok_3m)}</b> <button class="info" type="button" aria-label="Kako se procjenjuje rok" data-tip="Procjena: 3 mjeseca od zadnjeg prelaska 5 % (ZOMF čl. 135.).${rani ? ` Raniji datum vrijedi ako se kratki padovi do 0,02 postotna boda ispod 5 % ne računaju kao prekid.` : ""} HANFA može produljiti za još 3 mjeseca (~${dt(f.rok_6m, true)}). Zakon ne kaže od kojeg se dana računa; 2024./25. oba su fonda bila iznad 5 % dulje od 3 mjeseca.">?</button></span>`);
