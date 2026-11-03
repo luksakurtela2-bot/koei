@@ -15,11 +15,11 @@ FUNDS = {
 }
 
 
-def _get(url, data=None, headers=None, tries=3):
+def _get(url, data=None, headers=None, tries=3, timeout=60):
     for i in range(tries):
         try:
             req = urllib.request.Request(url, data=data, headers={**UA, **(headers or {})})
-            return urllib.request.urlopen(req, timeout=60).read()
+            return urllib.request.urlopen(req, timeout=timeout).read()
         except Exception:
             if i == tries - 1:
                 raise
@@ -67,7 +67,8 @@ def nav_series(fund, frm, to):
                 out[p[0]] = float(p[2].replace(",", "."))
         return out
     if "pbz" in src:
-        d = json.loads(_get(f"https://www.pbzco-fond.hr/api/wsdl/get-nav?fond_id={src['pbz']}&dateFrom={frm}&dateTo={to}"))
+        # PBZ CO poslužitelj odgovara samo hrvatskim adresama (s GitHubovih servera istek veze) → jedan kratak pokušaj
+        d = json.loads(_get(f"https://www.pbzco-fond.hr/api/wsdl/get-nav?fond_id={src['pbz']}&dateFrom={frm}&dateTo={to}", tries=1, timeout=20))
         return {x["datum"][:10]: float(x["NAV"]) for x in d["data"]["NAVrez"]}
     if "rf" in src:
         d = json.loads(_get(f"https://www.rmf.hr/Ajax.aspx?action=nav&sifra={src['rf']}&tmpDateFrom={_d(frm)}&tmpDateTo={_d(to)}"))

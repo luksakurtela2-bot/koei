@@ -95,7 +95,12 @@ def update(status):
             status[f"ZSE {sym}"] = f"greška: {e}"
     nav = {(r["datum"], r["fond"]): r["nav_eur"] for r in read_csv(D / "nav.csv")}
     frm = (date.today() - timedelta(days=45)).isoformat()
+    down = set()
     for fund in S.FUNDS:
+        prov = S.FUNDS[fund][0]
+        if prov in down:
+            status[f"NAV {fund}"] = "greška: poslužitelj nedostupan (preskočeno)"
+            continue
         try:
             got = S.nav_series(fund, frm, today)
             if not got:
@@ -105,6 +110,7 @@ def update(status):
             status[f"NAV {fund}"] = f"ok (zadnji {max(got)})"
         except Exception as e:
             status[f"NAV {fund}"] = f"greška: {e}"
+            down.add(prov)
     write_csv(D / "nav.csv", ["datum", "fond", "nav_eur"], [[d, f, v] for (d, f), v in sorted(nav.items())])
     H = read_csv(D / "holdings.csv")
     new = []
@@ -153,6 +159,29 @@ def holding_at(H, papir, fond, d):
 
 
 # ================================================================ 2. izračun
+def estimate_missing_nav(NAV, days, max_gap=10):
+    """Fond kojem izvor kasni (npr. PBZ CO nedostupan s GitHuba): NAV se nastavlja medijanom dnevne promjene
+    NAV-a ostalih društava iste kategorije. Najviše max_gap trgovinskih dana; vraća {fond: {datumi procjene}}."""
+    est = {}
+    for f in list(NAV):
+        kat = f.split("_")[1]
+        peers = [g for g in NAV if g != f and g.split("_")[1] == kat and g.split("_")[0] != f.split("_")[0]]
+        have = sorted(d for d in NAV[f] if d in days)
+        if not have:
+            continue
+        last = have[-1]
+        todo = [d for d in days if d > last and sum(1 for g in peers if d in NAV[g]) >= 2][:max_gap]
+        prev = last
+        for d in todo:
+            ch = sorted(NAV[g][d] / NAV[g][prev] for g in peers if d in NAV[g] and prev in NAV[g])
+            if len(ch) < 2:
+                break
+            NAV[f][d] = NAV[f][prev] * ch[len(ch) // 2]
+            est.setdefault(f, set()).add(d)
+            prev = d
+    return est
+
+
 def compute(status):
     shares_out = {k: v * sf(k, "0000") for k, v in SHARES_OUT_0.items()}
     zg = zagreb_now(); today = zg.date().isoformat(); before_close = zg.hour * 60 + zg.minute < 16 * 60 + 45
@@ -174,6 +203,7 @@ def compute(status):
     NAV = {}
     for r in read_csv(D / "nav.csv"):
         NAV.setdefault(r["fond"], {})[r["datum"]] = float(r["nav_eur"])
+    nav_est = estimate_missing_nav(NAV, days)
     Hidx = {}
     for r in read_csv(D / "holdings.csv"):
         Hidx.setdefault((r["papir"], r["fond"]), []).append(r)
@@ -213,7 +243,7 @@ def compute(status):
             n = NAV.get(f, {}).get(d)
             h, src = hold("KOEI", f, d)
             ser.append(h * KO[d]["vwap"] / n * 100 if (n and h) else None)
-            apx.append(bool(src and src["tocno"] == "izvedeno"))
+            apx.append(bool(src and src["tocno"] == "izvedeno") or d in nav_est.get(f, ()))
         raw[f], approx[f] = ser, apx
     hist = dict(dates=dates, vwap=[round(KO[d]["vwap"], 2) for d in dates],
                 series={f: [None if v is None else round(v, 4) for v in s] for f, s in raw.items()}, approx=approx)
@@ -242,7 +272,7 @@ def compute(status):
             if units(b, "KOEI") != units(a, "KOEI") and a["tocno"] in OK and b["tocno"] in OK:
                 chg = dict(trg=b["trg"], delta=units(b, "KOEI") - units(a, "KOEI"))
         funds.append(dict(
-            id=f, drustvo=drustvo, kat=kat, nav=nav, nav_date=dn, vwap=vw, dionica=h,
+            id=f, drustvo=drustvo, kat=kat, nav=nav, nav_date=dn, nav_procjena=dn in nav_est.get(f, set()), vwap=vw, dionica=h,
             dionica_trg=src["trg"] if src else None, dionica_izvor=src["izvor"] if src else "ne drži KOEI",
             dionica_tocno=bool(src and src["tocno"] in OK), posto_izdanja=h / shares_out["KOEI"],
             vrijednost=h * vw, udio=w, limit=lim, udio_grupa=grp, prag_cijena=prag(nav, h, vw, lim),

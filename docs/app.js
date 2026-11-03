@@ -62,6 +62,8 @@ function render(D) {
   const warn = [];
   if (ageH > 30) warn.push(`Podaci nisu osvježeni od ${dt(D.generirano.slice(0, 10), true)} – provjeri GitHub Actions.`);
   if (staleNav.length) warn.push(`Stariji NAV: ${staleNav.join(", ")}.`);
+  const estNav = B.filter((f) => f.nav_procjena).map((f) => NAME[f.id]);
+  if (estNav.length) warn.push(`NAV za ${estNav.join(", ")} nije dohvaćen sa stranice društva pa je procijenjen prema kretanju ostalih fondova; udio može odstupati za nekoliko stotinki postotnog boda.`);
   if (D.moguca_podjela) warn.push("Cijena KOEI promijenila se u jednom danu više od 50 % – moguća podjela dionica; brojke treba provjeriti.");
   if (warn.length) $(".hero").insertAdjacentHTML("beforeend", `<div class="warn">${warn.map(esc).join(" ")}</div>`);
   $("#totals").innerHTML = [
@@ -111,7 +113,7 @@ function renderGauges(B) {
         ${i === 0 ? `<span class="line5-lbl" style="left:${x(LIM)}%">5 %</span>` : ""}
       </div>
       <div class="g-facts">${facts.join("")}</div>
-      <div class="g-src">Pozicija na dan trgovanja ${dt(f.dionica_trg, true)}${f.dionica_tocno ? "" : " (procjena)"}, ${src}. ${chg} NAV od ${dt(f.nav_date, true)}</div>
+      <div class="g-src">Pozicija na dan trgovanja ${dt(f.dionica_trg, true)}${f.dionica_tocno ? "" : " (procjena)"}, ${src}. ${chg} NAV od ${dt(f.nav_date, true)}${f.nav_procjena ? " (procjena)" : ""}</div>
     </div>`;
   }).join("");
 }
@@ -184,7 +186,7 @@ function renderChart(days) {
     const sx = (p.clientX - r.left) * (W / r.width), k = Math.max(0, Math.min(idx.length - 1, Math.round((sx - m.l) / (W - m.l - m.r) * (idx.length - 1))));
     const i = idx[k]; cx.setAttribute("x1", X(k)); cx.setAttribute("x2", X(k)); cx.setAttribute("opacity", ".35");
     tip.hidden = false;
-    tip.innerHTML = `<b>${dt(H.dates[i], true)}</b>, VWAP ${eur(H.vwap[i], 2)}<br>` + ids.map((id) => `${NAME[id]}: ${H.series[id][i] == null ? "–" : fmt(H.series[id][i], 2) + " %"}${H.approx[id][i] ? " *" : ""}`).join("<br>") + (ids.some((id) => H.approx[id][i]) ? "<br><small>* pozicija izvedena iz mjesečnog izvješća</small>" : "");
+    tip.innerHTML = `<b>${dt(H.dates[i], true)}</b>, VWAP ${eur(H.vwap[i], 2)}<br>` + ids.map((id) => `${NAME[id]}: ${H.series[id][i] == null ? "–" : fmt(H.series[id][i], 2) + " %"}${H.approx[id][i] ? " *" : ""}`).join("<br>") + (ids.some((id) => H.approx[id][i]) ? "<br><small>* procjena (pozicija iz mjesečnog izvješća ili procijenjeni NAV)</small>" : "");
     const tx = Math.min(window.innerWidth - 250, p.clientX + 12); tip.style.left = tx + "px"; tip.style.top = (p.clientY - 10 - tip.offsetHeight) + "px";
   };
   const leave = () => { tip.hidden = true; cx.setAttribute("opacity", "0"); };
