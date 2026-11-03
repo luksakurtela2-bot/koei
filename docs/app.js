@@ -45,18 +45,23 @@ function render(D) {
 
   // hero
   const navDate = B.map((f) => f.nav_date).sort().pop() || k.datum;
-  const names = over.map((f) => NAME[f.id]);
-  $("#h1").textContent = over.length === 0 ? "Nijedan fond nije iznad limita od 5 %"
-    : over.length === 1 ? `${names[0]} je iznad limita od 5 %` : `${names.slice(0, -1).join(", ")} i ${names.at(-1)} su iznad limita od 5 %`;
   const today = scenario(k.vwap);
   const lagF = over.filter((f) => f.dionica_trg && f.dionica_trg < f.nav_date);
   const najv = lagF.length ? "najviše " : "";
-  const lagTxt = lagF.length ? ` Pozicije su iz SKDD-a za trgovine do ${dt(lagF.map((f) => f.dionica_trg).sort()[0], true)}; prodaje nakon toga još se ne vide.` : "";
-  const tail = k.datum > navDate ? ` Uz VWAP od ${dt(k.datum)} (${eur(k.vwap, 2)}) bilo bi ${najv}${fmt(today.t5)} dionica.` : "";
   const top = B.slice().sort((a, b) => b.udio - a.udio)[0];
-  $("#lede").innerHTML = over.length
-    ? `Da se vrate na 5 % neto imovine, moraju prodati ${najv}<b>${fmt(D.ukupno.visak5)}</b> dionica KOEI, odnosno <b>${fmt(D.ukupno.visak49)}</b> ako ciljaju 4,9 % kao PBZ CO u prosincu 2025. Izračun je prema NAV-u od ${dt(navDate, true)}${tail ? "." + tail : "."}${lagTxt}`
-    : top ? `Najbliži limitu je ${NAME[top.id]} (${pct(top.udio)}). Izračun je prema NAV-u od ${dt(navDate, true)}${lagTxt}` : "Nema podataka o fondovima B.";
+  const az = B.find((f) => f.id === "AZ_B");
+  // naslov = odgovor na pitanje "koliko KOEI moraju prodati"
+  $("#h1").innerHTML = over.length
+    ? `Mirovinci moraju prodati ${najv}<span class="big">${fmt(D.ukupno.visak5)}</span> dionica KOEI`
+    : "Trenutno nijedan fond ne mora prodavati KOEI";
+  const rows = over.sort((a, b) => b.visak5 - a.visak5).map((f) =>
+    `<li><span>${NAME[f.id]}</span><b>${fmt(f.visak5)}</b><small>${mil(f.visak5 * f.vwap)}, udio ${pct(f.udio)}</small></li>`);
+  if (az && az.status !== "iznad") rows.push(`<li class="zero"><span>AZ B</span><b>0</b><small>počinje prodavati tek iznad ${eur(az.prag_cijena, 1)}</small></li>`);
+  $("#lede").innerHTML = (over.length
+    ? `<p>Toliko trebaju prodati da im KOEI padne na 5 % neto imovine fonda, što je zakonski limit. To je ${mil(D.ukupno.eur5)} ili ${pct(D.ukupno.visak5 / D.shares_out, 1)} Končara.</p>`
+    : top ? `<p>Najbliži limitu je ${NAME[top.id]} s ${pct(top.udio)} neto imovine u KOEI.</p>` : "")
+    + `<ul class="split">${rows.join("")}</ul>`
+    + `<p class="small">Izračun prema NAV-u od ${dt(navDate, true)}${lagF.length ? ` i pozicijama iz SKDD-a za trgovine do ${dt(lagF.map((f) => f.dionica_trg).sort()[0], true)}; prodaje nakon toga još se ne vide, pa je broj gornja granica` : ""}.</p>`;
   const ageH = (Date.now() - new Date(D.generirano)) / 36e5;
   const staleNav = B.filter((f) => f.nav_date < navDate).map((f) => `${NAME[f.id]} (${dt(f.nav_date)})`);
   const warn = [];
@@ -66,11 +71,10 @@ function render(D) {
   if (estNav.length) warn.push(`NAV za ${estNav.join(", ")} nije dohvaćen sa stranice društva pa je procijenjen prema kretanju ostalih fondova; udio može odstupati za nekoliko stotinki postotnog boda.`);
   if (D.moguca_podjela) warn.push("Cijena KOEI promijenila se u jednom danu više od 50 % – moguća podjela dionica; brojke treba provjeriti.");
   if (warn.length) $(".hero").insertAdjacentHTML("beforeend", `<div class="warn">${warn.map(esc).join(" ")}</div>`);
-  $("#totals").innerHTML = [
-    ["key", fmt(D.ukupno.visak5), `${najv}dionica za prodaju do 5 %, ${mil(D.ukupno.eur5)}`],
-    ["", fmt(D.ukupno.visak49), `dionica do 4,9 %, ${mil(D.ukupno.eur49)}`],
-    ["", fmt(D.ukupno.visak5 / D.likvidnost.adv20.dionica, 0) + " dana", `prosječnog dnevnog prometa (${fmt(D.likvidnost.adv20.dionica)} dionica bez blokova)`],
-  ].map(([c, b, s]) => `<div class="tot ${c}"><b>${b}</b><span>${s}</span></div>`).join("");
+  const tiles = [["", fmt(D.ukupno.visak49), `ako se spuste na 4,9 % kao PBZ CO u prosincu 2025.`]];
+  if (k.datum > navDate) tiles.push(["", fmt(today.t5), `uz cijenu od ${dt(k.datum)} (${eur(k.vwap, 2)})`]);
+  tiles.push(["", fmt(D.ukupno.visak5 / D.likvidnost.adv20.dionica, 0) + " dana", `ukupnog dnevnog prometa KOEI (${fmt(D.likvidnost.adv20.dionica)} dionica dnevno)`]);
+  $("#totals").innerHTML = over.length ? tiles.map(([c, b, s]) => `<div class="tot ${c}"><b>${b}</b><span>${s}</span></div>`).join("") : "";
 
   renderGauges(B);
   initCalc();
@@ -257,7 +261,10 @@ function renderOthers(D) {
 function renderMethod(D) {
   const st = Object.entries(D.izvori_status || {});
   const bad = st.filter(([, v]) => !String(v).startsWith("ok"));
-  if (bad.length) $(".hero").insertAdjacentHTML("beforeend", `<div class="warn">Zadnje osvježavanje nije dohvatilo: ${bad.map(([k]) => esc(k)).join(", ")}. Prikazani su zadnji dostupni podaci.</div>`);
+  const onlyPbz = bad.length && bad.every(([k]) => k.startsWith("NAV PBZ"));
+  if (bad.length) $(".hero").insertAdjacentHTML("beforeend", `<div class="warn">${onlyPbz
+    ? "Stranica PBZ CO ne odgovara GitHubovim serverima, pa se za PBZ CO koristi zadnji dohvaćeni NAV ili procjena (označeno u kartici fonda). Pozicije PBZ CO su točne (SKDD)."
+    : `Zadnje osvježavanje nije dohvatilo: ${bad.map(([k]) => esc(k)).join(", ")}. Prikazani su zadnji dostupni podaci.`}</div>`);
   $("#method").innerHTML = `
   <p><b>Limit.</b> Obvezni mirovinski fond A ili B smije u dionice jednog izdavatelja uložiti najviše 5 % neto imovine (ZOMF čl. 127. st. 2.; C: 3 %). Kad udio prijeđe limit bez kupnje (rast cijene ili pad ostatka portfelja – prema uobičajenom tumačenju čl. 135. st. 2.), fond ga mora uskladiti u razumnom roku, najviše 3 mjeseca, uz moguće produljenje HANFA-e za još 3. Grupa KOEI + KODT smije najviše 10 %. Vlasnički limiti (20 % po fondu) ne ovise o cijeni.</p>
   <p><b>Izračun.</b> Udio = broj dionica × dnevni VWAP kontinuiranog trgovanja na ZSE (bez blokova i OTC-a) ÷ dnevni NAV fonda. Fondovi vrednuju KOEI po tom VWAP-u (provjereno za PBZ CO, AZ i Erste na više krajeva mjeseci, uključujući dane s blok-transakcijama). Višak = dionice − 5 % × NAV ÷ VWAP. Kod scenarija i praga cijene NAV raste zajedno s vlastitom pozicijom KOEI.</p>

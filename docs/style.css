@@ -151,3 +151,16 @@ input[type=range] { width: 100%; margin: 14px 0 4px; accent-color: var(--limit);
 @media (prefers-reduced-motion: no-preference) {
   .fill, .over { transition: width .5s ease; }
 }
+
+/* naslov s brojem i raspodjela po fondovima */
+.hero h1 { max-width: 24ch; }
+.hero h1 .big { color: var(--limit); white-space: nowrap; }
+.lede p { margin-bottom: 10px; }
+.lede .small { font-size: 13px; color: var(--ink-3); margin: 10px 0 0; }
+.split { list-style: none; border-top: 2px solid var(--ink); margin-top: 6px; }
+.split li { display: grid; grid-template-columns: 1fr auto; column-gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--rule); }
+.split span { font-weight: 600; color: var(--ink); }
+.split b { font: 600 22px/1.1 var(--cond); color: var(--limit); text-align: right; }
+.split small { grid-column: 1 / -1; font-size: 13px; color: var(--ink-3); }
+.split li.zero b { color: var(--ink-3); }
+.totals { border-top: 0; margin-top: 14px; }
