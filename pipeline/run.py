@@ -111,6 +111,14 @@ def update(status):
         except Exception as e:
             status[f"NAV {fund}"] = f"greška: {e}"
             down.add(prov)
+    # PBZ CO: NAV koji lokalni zadatak (local/pbz_nav.py) dohvaća s računala u Hrvatskoj
+    loc = read_csv(D / "nav_pbz.csv")
+    for r in loc:
+        nav[(r["datum"], r["fond"])] = r["nav_eur"]
+    for fund in ("PBZ_A", "PBZ_B", "PBZ_C"):
+        mine = [r["datum"] for r in loc if r["fond"] == fund]
+        if mine and not status.get(f"NAV {fund}", "").startswith("ok"):
+            status[f"NAV {fund}"] = f"ok (lokalno računalo, zadnji {max(mine)})"
     write_csv(D / "nav.csv", ["datum", "fond", "nav_eur"], [[d, f, v] for (d, f), v in sorted(nav.items())])
     H = read_csv(D / "holdings.csv")
     new = []

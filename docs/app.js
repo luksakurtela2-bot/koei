@@ -63,12 +63,10 @@ function render(D) {
     + `<ul class="split">${rows.join("")}</ul>`
     + `<p class="small">Izračun prema NAV-u od ${dt(navDate, true)}${lagF.length ? ` i pozicijama iz SKDD-a za trgovine do ${dt(lagF.map((f) => f.dionica_trg).sort()[0], true)}; prodaje nakon toga još se ne vide, pa je broj gornja granica` : ""}.</p>`;
   const ageH = (Date.now() - new Date(D.generirano)) / 36e5;
-  const staleNav = B.filter((f) => f.nav_date < navDate).map((f) => `${NAME[f.id]} (${dt(f.nav_date)})`);
+  const staleNav = B.filter((f) => f.nav_date < navDate && !f.id.startsWith("PBZ")).map((f) => `${NAME[f.id]} (${dt(f.nav_date)})`);
   const warn = [];
   if (ageH > 30) warn.push(`Podaci nisu osvježeni od ${dt(D.generirano.slice(0, 10), true)} – provjeri GitHub Actions.`);
   if (staleNav.length) warn.push(`Stariji NAV: ${staleNav.join(", ")}.`);
-  const estNav = B.filter((f) => f.nav_procjena).map((f) => NAME[f.id]);
-  if (estNav.length) warn.push(`NAV za ${estNav.join(", ")} nije dohvaćen sa stranice društva pa je procijenjen prema kretanju ostalih fondova; udio može odstupati za nekoliko stotinki postotnog boda.`);
   if (D.moguca_podjela) warn.push("Cijena KOEI promijenila se u jednom danu više od 50 % – moguća podjela dionica; brojke treba provjeriti.");
   if (warn.length) $(".hero").insertAdjacentHTML("beforeend", `<div class="warn">${warn.map(esc).join(" ")}</div>`);
   const tiles = [["", fmt(D.ukupno.visak49), `ako se spuste na 4,9 % kao PBZ CO u prosincu 2025.`]];
@@ -117,7 +115,7 @@ function renderGauges(B) {
         ${i === 0 ? `<span class="line5-lbl" style="left:${x(LIM)}%">5 %</span>` : ""}
       </div>
       <div class="g-facts">${facts.join("")}</div>
-      <div class="g-src">Pozicija na dan trgovanja ${dt(f.dionica_trg, true)}${f.dionica_tocno ? "" : " (procjena)"}, ${src}. ${chg} NAV od ${dt(f.nav_date, true)}${f.nav_procjena ? " (procjena)" : ""}</div>
+      <div class="g-src">Pozicija na dan trgovanja ${dt(f.dionica_trg, true)}${f.dionica_tocno ? "" : " (procjena)"}, ${src}. ${chg} NAV od ${dt(f.nav_date, true)}${f.nav_procjena ? " – procjena prema kretanju ostalih fondova (stranica društva nije dohvaćena)" : ""}.</div>
     </div>`;
   }).join("");
 }
@@ -261,10 +259,9 @@ function renderOthers(D) {
 function renderMethod(D) {
   const st = Object.entries(D.izvori_status || {});
   const bad = st.filter(([, v]) => !String(v).startsWith("ok"));
-  const onlyPbz = bad.length && bad.every(([k]) => k.startsWith("NAV PBZ"));
-  if (bad.length) $(".hero").insertAdjacentHTML("beforeend", `<div class="warn">${onlyPbz
-    ? "Stranica PBZ CO ne odgovara GitHubovim serverima, pa se za PBZ CO koristi zadnji dohvaćeni NAV ili procjena (označeno u kartici fonda). Pozicije PBZ CO su točne (SKDD)."
-    : `Zadnje osvježavanje nije dohvatilo: ${bad.map(([k]) => esc(k)).join(", ")}. Prikazani su zadnji dostupni podaci.`}</div>`);
+  // PBZ CO NAV s GitHuba nije dostupan (poznato); procjena se označava tiho u kartici fonda
+  const realBad = bad.filter(([k]) => !k.startsWith("NAV PBZ"));
+  if (realBad.length) $(".hero").insertAdjacentHTML("beforeend", `<div class="warn">Zadnje osvježavanje nije dohvatilo: ${realBad.map(([k]) => esc(k)).join(", ")}. Prikazani su zadnji dostupni podaci.</div>`);
   $("#method").innerHTML = `
   <p><b>Limit.</b> Obvezni mirovinski fond A ili B smije u dionice jednog izdavatelja uložiti najviše 5 % neto imovine (ZOMF čl. 127. st. 2.; C: 3 %). Kad udio prijeđe limit bez kupnje (rast cijene ili pad ostatka portfelja – prema uobičajenom tumačenju čl. 135. st. 2.), fond ga mora uskladiti u razumnom roku, najviše 3 mjeseca, uz moguće produljenje HANFA-e za još 3. Grupa KOEI + KODT smije najviše 10 %. Vlasnički limiti (20 % po fondu) ne ovise o cijeni.</p>
   <p><b>Izračun.</b> Udio = broj dionica × dnevni VWAP kontinuiranog trgovanja na ZSE (bez blokova i OTC-a) ÷ dnevni NAV fonda. Fondovi vrednuju KOEI po tom VWAP-u (provjereno za PBZ CO, AZ i Erste na više krajeva mjeseci, uključujući dane s blok-transakcijama). Višak = dionice − 5 % × NAV ÷ VWAP. Kod scenarija i praga cijene NAV raste zajedno s vlastitom pozicijom KOEI.</p>
