@@ -16,7 +16,7 @@ import pymupdf
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from sources import _get
 
-VERZIJA = 3                 # povećati kad se promijeni čitanje obavijesti → sve se ponovno pročitaju
+VERZIJA = 4                 # povećati kad se promijeni čitanje obavijesti → sve se ponovno pročitaju
 BASE = "https://eho.zse.hr"
 Q = "tx_issuerpublicationmanager_publicnewslisting"
 NASLOV = "Prijava transakcija rukovoditelja"
@@ -85,7 +85,7 @@ def _bez_crta(pix):
     return pymupdf.Pixmap(pymupdf.csGRAY, pix.width, pix.height, a.tobytes(), False)
 
 
-def _ocr(doc, psm="6", dpi=300, clean=True):
+def _ocr(doc, psm="6", dpi=300, clean=True, tsv=False):
     exe = shutil.which("tesseract")
     if not exe:
         raise RuntimeError("skenirana obavijest, a tesseract nije instaliran")
@@ -97,47 +97,95 @@ def _ocr(doc, psm="6", dpi=300, clean=True):
             png = os.path.join(tmp, f"p{i}.png")
             pix = page.get_pixmap(dpi=dpi, colorspace=pymupdf.csGRAY)
             (_bez_crta(pix) if clean else pix).save(png)
-            txt.append(subprocess.run([exe, png, "stdout", "-l", lang, "--psm", psm], capture_output=True, text=True,
-                                      encoding="utf-8").stdout)
-    return "\n".join(txt)
+            txt.append(subprocess.run([exe, png, "stdout", "-l", lang, "--psm", psm] + (["tsv"] if tsv else []),
+                                      capture_output=True, text=True, encoding="utf-8").stdout)
+    return txt if tsv else "\n".join(txt)
+
+
+RX_DAT, RX_CIJ, RX_VOL = r"\d{1,2}\.\d{1,2}\.\d{4}\.?", r"\d{1,3}(?:\.\d{3})*,\d{2,4}", r"\d{1,3}(?:\.\d{3})*"
+
+
+def _redci_tsv(doc):
+    """Retci tablice iz položaja riječi (tesseract TSV, rijetki tekst): datum → cijena desno → volumen desno, u istoj visini."""
+    rows = []
+    for page in _ocr(doc, "11", 300, True, tsv=True):
+        W = []
+        for ln in page.splitlines()[1:]:
+            c = ln.split("\t")
+            if len(c) == 12 and c[11].strip():
+                W.append(dict(x=int(c[6]), y=int(c[7]) + int(c[9]) / 2, h=int(c[9]), t=c[11].strip().strip("|")))
+        for d in (w for w in W if re.fullmatch(RX_DAT, w["t"]) and _datum(w["t"].rstrip("."))):
+            row = sorted((w for w in W if w["x"] > d["x"] and abs(w["y"] - d["y"]) < 0.8 * d["h"]), key=lambda w: w["x"])
+            cij = next((w for w in row if re.fullmatch(RX_CIJ, w["t"])), None)
+            vol = next((w for w in row if cij and w["x"] > cij["x"] and re.fullmatch(RX_VOL, w["t"])), None)
+            if cij:
+                rows.append(dict(trg=_datum(d["t"].rstrip(".")), kolicina=int(_broj(vol["t"])) if vol else None, cijena=_broj(cij["t"])))
+    return rows
 
 
 def procitaj(pdf_bytes):
     """MAR obrazac → dict(osoba, izmjena, ocr, rows=[{trg, vrsta, kolicina, cijena}], provjera, zbirno).
-    Sken: OCR redom po OCR_POKUSAJI dok provjera prema zbirnim podacima ne prođe; volumeni koje jedan prolaz
-    ne pročita uzimaju se iz drugog (isti datum i cijena) – rezultat opet mora proći provjeru."""
+    Sken: OCR redom po OCR_POKUSAJI dok provjera prema zbirnim podacima ne prođe. Ako nijedan prolaz sam ne prođe,
+    volumeni koje jedan prolaz ne pročita uzimaju se iz drugih (isti datum i cijena, uključivo položaje riječi) –
+    spojeni rezultat opet mora proći istu provjeru."""
     doc = pymupdf.open(stream=pdf_bytes, filetype="pdf")
     t = "\n".join(p.get_text() for p in doc)
     if len(re.sub(r"\s", "", t)) >= 200:
         return _parse(t, ocr=False)
     tries = []
     for psm, dpi, clean in OCR_POKUSAJI:
-        txt = _ocr(doc, psm, dpi, clean)
-        r = _parse(txt, ocr=True)
-        tries.append((txt, r))
-        if r["provjera"].startswith("ok") or not fond(tries[0][1]["osoba"]):
+        r = _parse(_ocr(doc, psm, dpi, clean), ocr=True)
+        if r["provjera"].startswith("ok") or not fond((tries[0] if tries else r)["osoba"]):
             return r
-        if len(tries) >= 2:                                 # spoji volumene iz svih dosadašnjih prolaza
-            vol = {}
-            for _, x in tries:
-                for row in x["rows"]:
-                    if row["kolicina"]:
-                        vol.setdefault((row["trg"], row["cijena"]), set()).add(row["kolicina"])
-            base = max((x for _, x in tries), key=lambda x: (len(x["rows"]), sum(1 for y in x["rows"] if y["kolicina"])))
-            fill = {}
-            for i, row in enumerate(base["rows"]):
+        tries.append(r)
+        if len(tries) == 1:
+            tries.append(dict(r, rows=_redci_tsv(doc), vrsta_doc="?"))
+        vrsta = next((x["vrsta_doc"] for x in tries if x["vrsta_doc"] != "?"), "?")
+        zbirno = next((x["zbirno"] for x in tries if x["zbirno"]), None)
+        vol = {}
+        for x in tries:
+            for row in x["rows"]:
+                if row["kolicina"]:
+                    vol.setdefault((row["trg"], row["cijena"]), set()).add(row["kolicina"])
+        for base in sorted(tries, key=lambda x: -len(x["rows"])):
+            rows = []
+            for row in base["rows"]:
                 v = vol.get((row["trg"], row["cijena"]), set())
-                if not row["kolicina"] and len(v) == 1:
-                    fill[i] = next(iter(v))
-            if fill:
-                m = _parse(next(txt for txt, x in tries if x is base), ocr=True, fill=fill)
-                if m["provjera"].startswith("ok"):
-                    m["provjera"] += " (spojeno iz više OCR prolaza)"
-                    return m
-    return tries[0][1]
+                rows.append(dict(row, vrsta=vrsta, kolicina=row["kolicina"] or (next(iter(v)) if len(v) == 1 else None)))
+            pr, rows = _provjeri(rows, zbirno, vrsta)
+            if pr.startswith("ok"):
+                return dict(tries[0], rows=rows, zbirno=zbirno, provjera=pr + " (spojeno iz više OCR prolaza)")
+    return tries[0]
 
 
-def _parse(t, ocr, fill=None):
+def _provjeri(rows, zbirno, vrsta, koei=True):
+    """Retci moraju dati zbirni volumen i prosječnu cijenu iz iste obavijesti → (provjera, retci)."""
+    rows = [dict(r) for r in rows]
+    miss = [r for r in rows if r["kolicina"] is None]
+    dopuna = False
+    if zbirno and len(miss) == 1:                  # jedan nepročitan volumen = zbirni − ostali; potvrđuje ga prosječna cijena
+        miss[0]["kolicina"] = zbirno[0] - sum(r["kolicina"] for r in rows if r is not miss[0])
+        dopuna = miss[0]["kolicina"] > 0
+    if not rows:
+        return "nema redaka", rows
+    if any(r["trg"] is None for r in rows):
+        return "nepročitan datum", rows
+    if any(r["kolicina"] is None or r["kolicina"] <= 0 for r in rows):
+        return "nepročitan volumen", rows
+    if not koei:
+        return "nije KOEI", rows
+    if vrsta == "?":
+        return "nepoznata vrsta transakcije", rows
+    if not zbirno:
+        return "nema zbirnih podataka", rows
+    n = sum(r["kolicina"] for r in rows)
+    vw = sum(r["kolicina"] * r["cijena"] for r in rows) / n
+    if n == zbirno[0] and abs(vw - zbirno[1]) <= 0.011:
+        return ("ok (jedan volumen iz zbirnog)" if dopuna else "ok"), rows
+    return f"zbroj {n} / {vw:.2f} ≠ zbirno {zbirno[0]} / {zbirno[1]:.2f}", rows
+
+
+def _parse(t, ocr):
     t = re.sub(r"[ \t ]+", " ", t)
     sek1 = re.search(r"Podaci o osobi[^\n]*\n(.+?)(?:\n[^\n]*)?Razlog obavje", t, re.S)       # odjeljak 1. obrasca
     ime = re.search(r"Ime(?: osobe| i prezime)?:?\s*\|?\s*(.+?)\n\s*\|?\s*2\.", t, re.S)
@@ -147,40 +195,22 @@ def _parse(t, ocr, fill=None):
     vr = re.search(r"Priroda transakcije\W*(?:-\s*)?([^\n]+)", t)
     vrsta = vr.group(1).lower() if vr else ""
     vrsta = "prodaja" if re.search(r"otpu|prodaj|raspola", vrsta) else "kupnja" if re.search(r"stje|stec|kup", vrsta) else "?"
+    if vrsta == "?":                               # OCR nije pročitao redak – vrsta iz predmeta dopisa ili teksta obavijesti
+        pr = re.search(r"Predmet:(.{0,120})", t, re.S)
+        low = (pr.group(1) if pr else t).lower()
+        ima_p, ima_k = bool(re.search(r"otpu[sš]t|otpustio|prodaj", low)), bool(re.search(r"stjecanj|stekao|kupnj", low))
+        vrsta = "prodaja" if ima_p and not ima_k else "kupnja" if ima_k and not ima_p else "?"
     tab = t[t.find("Priroda transakcije"):]
     tab = tab[:tab.find("Zbirn")] if "Zbirn" in tab else tab
     sp = r"[ |]*" if ocr else r"[\s|]*"           # OCR: redak tablice je jedan redak teksta; volumen može nedostajati
-    rows = [dict(trg=_datum(d), vrsta=vrsta, kolicina=int(_broj(n)) if n else None, cijena=_broj(c))
-            for d, c, n in re.findall(r"(\d{1,2}\.\d{1,2}\.\d{4})\.?[\s|]*(\d{1,3}(?:\.\d{3})*,\d{2,4})\s*(?:EUR|€)?" + sp
-                                      + r"(\d{1,3}(?:\.\d{3})*)?(?![\d,])", tab)]
-    zv = re.search(r"Zbirni\s*volumen:?\s*(\d{1,3}(?:\.\d{3})*)", t)
-    zc = re.search(r"Cijena[^:\n]*:?\s*(\d{1,3}(?:\.\d{3})*,\d{2,4})\s*(?:EUR|€)", t[zv.end():] if zv else "")
+    rows = [dict(trg=_datum(d.rstrip(".")), vrsta=vrsta, kolicina=int(_broj(n)) if n else None, cijena=_broj(c))
+            for d, c, n in re.findall(r"(" + RX_DAT + r")[\s|]*(" + RX_CIJ + r")\s*(?:EUR|€)?" + sp + r"(" + RX_VOL + r")?(?![\d,])", tab)]
+    zv = re.search(r"Zbirni\s*volumen:?\s*(" + RX_VOL + r")", t)
+    zc = re.search(r"Cijena[^:\n]*:?\s*(" + RX_CIJ + r")\s*(?:EUR|€)", t[zv.end():] if zv else "")
     zbirno = (int(_broj(zv.group(1))), _broj(zc.group(1))) if zv and zc else None
-    for i, v in (fill or {}).items():
-        rows[i]["kolicina"] = v
-    miss = [r for r in rows if r["kolicina"] is None]
-    dopuna = False
-    if zbirno and len(miss) == 1:                  # jedan nepročitan volumen = zbirni − ostali; potvrđuje ga prosječna cijena
-        miss[0]["kolicina"] = zbirno[0] - sum(r["kolicina"] for r in rows if r is not miss[0])
-        dopuna = miss[0]["kolicina"] > 0
-    if not rows:
-        provjera = "nema redaka"
-    elif any(r["trg"] is None for r in rows):
-        provjera = "nepročitan datum"
-    elif any(r["kolicina"] is None or r["kolicina"] <= 0 for r in rows):
-        provjera = "nepročitan volumen"
-    elif "HRKOEIRA0009" not in t.replace(" ", "") and "KOEI" not in t:
-        provjera = "nije KOEI"
-    elif vrsta == "?":
-        provjera = "nepoznata vrsta transakcije"
-    elif not zbirno:
-        provjera = "nema zbirnih podataka"
-    else:
-        n = sum(r["kolicina"] for r in rows)
-        vw = sum(r["kolicina"] * r["cijena"] for r in rows) / n
-        ok = n == zbirno[0] and abs(vw - zbirno[1]) <= 0.011
-        provjera = ("ok (jedan volumen iz zbirnog)" if dopuna else "ok") if ok else f"zbroj {n} / {vw:.2f} ≠ zbirno {zbirno[0]} / {zbirno[1]:.2f}"
-    return dict(osoba=osoba, izmjena=izmjena, ocr=ocr, rows=rows, provjera=provjera, zbirno=zbirno)
+    koei = "HRKOEIRA0009" in t.replace(" ", "") or "KOEI" in t
+    provjera, rows = _provjeri(rows, zbirno, vrsta, koei)
+    return dict(osoba=osoba, izmjena=izmjena, ocr=ocr, rows=rows, provjera=provjera, zbirno=zbirno, vrsta_doc=vrsta)
 
 
 def fond(osoba):
