@@ -16,6 +16,7 @@ import pymupdf
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from sources import _get
 
+VERZIJA = 2                 # povećati kad se promijeni čitanje obavijesti → sve se ponovno pročitaju
 BASE = "https://eho.zse.hr"
 Q = "tx_issuerpublicationmanager_publicnewslisting"
 NASLOV = "Prijava transakcija rukovoditelja"

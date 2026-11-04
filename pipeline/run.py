@@ -159,15 +159,18 @@ def update(status, quick=False):
     return new
 
 
-MAR_P = ["objava", "objavljeno", "fond", "ocr", "provjera", "redaka", "zbirni_volumen", "zbirna_cijena", "izmjena", "pdf"]
+MAR_P = ["objava", "objavljeno", "verzija", "fond", "ocr", "provjera", "redaka", "zbirni_volumen", "zbirna_cijena", "izmjena", "pdf"]
 MAR_T = ["objava", "objavljeno", "fond", "trg", "vrsta", "kolicina", "cijena", "provjera"]
 
 
 def update_mar(status):
     """Nove prijave transakcija rukovoditelja za KOEI → data/mar_pregled.csv (sve obavijesti) i data/mar.csv (transakcije fondova)."""
     P, M = read_csv(D / "mar_pregled.csv"), read_csv(D / "mar.csv")
+    # obavijesti pročitane starijom verzijom parsera (E.VERZIJA) čitaju se ponovno
+    stare = {r["objava"] for r in P if r.get("verzija") != str(E.VERZIJA)}
+    P = [r for r in P if r["objava"] not in stare]; M = [r for r in M if r["objava"] not in stare]
     known = {r["objava"] for r in P}
-    od = MAR_OD if not P else max(MAR_OD, (date.fromisoformat(max(r["objavljeno"] for r in P)[:10]) - timedelta(days=45)).isoformat())
+    od = MAR_OD if not P or stare else max(MAR_OD, (date.fromisoformat(max(r["objavljeno"] for r in P)[:10]) - timedelta(days=45)).isoformat())
     errs = []
     try:
         for ob in reversed(E.lista("KOEI", od)):
@@ -180,7 +183,7 @@ def update_mar(status):
                 continue
             f = E.fond(r["osoba"]) or ""
             zb = r["zbirno"] or ("", "")
-            P.append(dict(objava=ob["id"], objavljeno=ob["objavljeno"], fond=f, ocr="da" if r["ocr"] else "", provjera=r["provjera"],
+            P.append(dict(objava=ob["id"], objavljeno=ob["objavljeno"], verzija=E.VERZIJA, fond=f, ocr="da" if r["ocr"] else "", provjera=r["provjera"],
                           redaka=len(r["rows"]), zbirni_volumen=zb[0], zbirna_cijena=zb[1], izmjena="da" if r["izmjena"] else "", pdf=ob["pdf"]))
             if f:
                 M += [dict(objava=ob["id"], objavljeno=ob["objavljeno"], fond=f, provjera=r["provjera"], **x) for x in r["rows"]]
