@@ -187,7 +187,7 @@ def update_mar(status):
         P.sort(key=lambda r: r["objavljeno"]); M.sort(key=lambda r: (r["trg"], r["objavljeno"]))
         write_csv(D / "mar_pregled.csv", MAR_P, [[r[k] for k in MAR_P] for r in P])
         write_csv(D / "mar.csv", MAR_T, [[r[k] for k in MAR_T] for r in M])
-        bad = [r for r in P if r["fond"] and (r["provjera"] != "ok" or r["izmjena"])]
+        bad = [r for r in P if r["fond"] and (not r["provjera"].startswith("ok") or r["izmjena"])]
         last = max((r["objavljeno"] for r in P if r["fond"]), default="–")
         status["MAR obavijesti"] = (f"ok (zadnja {last[:10]})" if not (bad or errs) else
                                     f"greška: ručno provjeriti {', '.join([r['objavljeno'][:10] + ' ' + r['provjera'] for r in bad] + errs)}")
@@ -236,7 +236,7 @@ def estimate_missing_nav(NAV, days, max_gap=10):
 def mar_after_skdd(Hidx, status):
     """Transakcije iz MAR obavijesti (provjera ok) nakon zadnjeg SKDD stanja fonda postaju nova stanja (tocno="mar").
     Usput: provjera MAR ↔ SKDD – svaka promjena SKDD stanja od početka MAR praćenja mora odgovarati zbroju MAR transakcija."""
-    rows = [r for r in read_csv(D / "mar.csv") if r["provjera"] == "ok"]
+    rows = [r for r in read_csv(D / "mar.csv") if r["provjera"].startswith("ok")]
     if not rows:
         return dict(transakcije=[], neslaganja=[])
     start = min(r["trg"] for r in rows)
