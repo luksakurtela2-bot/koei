@@ -104,7 +104,7 @@ function renderPrices(D, B) {
   $("#ladder").innerHTML = `<p class="floor">Ispod <b>${eur(min.prag_cijena, 1)}</b> nitko ne mora prodavati.</p>
     <ol class="steps">${hold.map((f) => `<li><span>od <b>${eur(f.prag_cijena, 1)}</b></span><span>prodaje ${NAME[f.id]}</span></li>`).join("")}</ol>
     <p class="state">${state}</p>`;
-  $("#px-note").textContent = `Količine do 5 % NAV-a po fondu. Pozicije su sve prodaje koje SKDD već pokazuje, a NAV je od ${dt(navDate, true)}; tablica se osvježava svaki sat tijekom trgovanja.`;
+  $("#px-note").textContent = `Količine do 5 % NAV-a po fondu. Pozicije uključuju sve prodaje koje SKDD već pokazuje i, za PBZ CO, prodaje iz njegovih obavijesti na ZSE; NAV je od ${dt(navDate, true)}; tablica se osvježava svaki sat tijekom trgovanja.`;
   // sažeta tablica (~8 redaka): pragovi fondova, sadašnja cijena i okrugle cijene po 50 € između; ostalo na klik
   const curRow = L ? { c: L.zadnja, t: `sada (${L.vrijeme})`, cls: "now" } : { c: k.zadnja, t: `zadnja zaključna (${dt(k.datum)})`, cls: "now" };
   const special = [curRow, ...hold.map((f) => ({ c: f.prag_cijena, t: `ovdje počinje ${NAME[f.id]}`, cls: "trig" }))];

@@ -276,7 +276,7 @@ def mar_after_skdd(Hidx, status):
         for d in sorted(by):
             base += by[d]["n"]
             lst.append(dict(trg=d, papir="KOEI", fond=f, dionica=str(round(base / sf("KOEI", d))), tocno="mar",
-                            izvor=f"MAR obavijest {S.FUNDS[f][0]} na ZSE (objavljena {by[d]['obj'][:10]})",
+                            izvor=f"MAR obavijest {S.FUNDS[f][0]} na ZSE (objavljena {int(by[d]['obj'][8:10])}. {int(by[d]['obj'][5:7])}. {by[d]['obj'][:4]}.)",
                             cijena_mar=by[d]["eur"] / by[d]["kom"]))
             recent.append(dict(fond=f, trg=d, dionica=by[d]["n"], cijena=by[d]["eur"] / by[d]["kom"], objavljeno=by[d]["obj"]))
     if diff:
