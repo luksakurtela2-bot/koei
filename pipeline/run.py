@@ -286,6 +286,63 @@ def mar_after_skdd(Hidx, status):
     return dict(transakcije=recent, neslaganja=diff)
 
 
+EPIZODE_OD = "2025-01-02"
+
+
+def breach_episodes(f, Hidx, NAV, KO, days):
+    """Razdoblja u kojima je fond bio iznad 5 % (dnevni VWAP i NAV). Stanja po datumu trgovanja (SKDD, MAR) vrijede do
+    sljedeće promjene. Prema stanju iz izvješća fonda (kraj mjeseca/polugodišta) put prodaje nije poznat → raspon:
+    „sigurno” iznad i uz manje stanje, „moguće” samo uz veće. Izvedena stanja (upisana 1. u mjesecu) su stanja na kraju tog mjeseca."""
+    pts = {}
+    for r in Hidx.get(("KOEI", f), []):
+        d = r["trg"]
+        if r["tocno"] == "izvedeno":
+            d = (date.fromisoformat(add_months(d[:8] + "01", 1)) - timedelta(days=1)).isoformat()
+        snap = r["tocno"] in ("izvedeno", "izvjesce") or "portfelj" in r["izvor"] or "izvješć" in r["izvor"]
+        pts[d] = (units(r, "KOEI"), snap)
+    ks = sorted(pts)
+    if not ks:
+        return []
+    nav = NAV.get(f, {})
+    ser = []
+    for d in days:
+        if d < EPIZODE_OD or d not in nav:
+            continue
+        i = bisect_right(ks, d)
+        a = pts[ks[i - 1]][0] if i else pts[ks[0]][0]
+        b = a if (i and ks[i - 1] == d) or i >= len(ks) or not pts[ks[i]][1] else pts[ks[i]][0]
+        lo, hi, p, n = min(a, b), max(a, b), KO[d]["vwap"], nav[d]
+        ser.append(dict(d=d, p=p, n=n, lo=lo, hi=hi, wlo=lo * p / n, whi=hi * p / n))
+    eps, cur = [], None
+    for i, x in enumerate(ser):
+        if x["whi"] > LIMIT:
+            cur = cur or dict(i0=i)
+            cur["i1"] = i
+        elif cur:
+            eps.append(cur); cur = None
+    if cur:
+        eps.append(cur)
+    out = []
+    for e in eps:
+        seg = ser[e["i0"]:e["i1"] + 1]
+        nxt = ser[e["i1"] + 1] if e["i1"] + 1 < len(ser) else None
+        top = max(seg, key=lambda x: x["whi"])
+        start_h = seg[0]["hi"]
+        if not nxt:
+            kraj = "traje"
+        elif seg[-1]["hi"] * nxt["p"] / nxt["n"] > LIMIT:  # s jučerašnjim stanjem bio bi i dalje iznad → izašao prodajom
+            kraj = "prodaja"
+        else:
+            kraj = "pad cijene" if nxt["p"] < seg[-1]["p"] else "rast NAV-a"
+        exact = all(x["lo"] == x["hi"] for x in seg) and (not nxt or nxt["lo"] == nxt["hi"])
+        end_h = nxt["lo"] if nxt else seg[-1]["lo"]
+        out.append(dict(od=seg[0]["d"], do=None if not nxt else seg[-1]["d"], dana=len(seg),
+                        sigurno_dana=sum(1 for x in seg if x["wlo"] > LIMIT), vwap_ulaz=round(seg[0]["p"], 2),
+                        max_udio=round(top["whi"], 5), max_dan=top["d"], vwap_max=round(top["p"], 2),
+                        vwap_kraj=round(seg[-1]["p"], 2), kraj=kraj, prodano=max(0, start_h - end_h) if exact else None, tocno=exact))
+    return out[::-1]
+
+
 def compute(status):
     shares_out = {k: v * sf(k, "0000") for k, v in SHARES_OUT_0.items()}
     zg = zagreb_now(); today = zg.date().isoformat(); before_close = zg.hour * 60 + zg.minute < 16 * 60 + 45
@@ -392,6 +449,8 @@ def compute(status):
             nedavno_iznad=recent_above, zadnja_promjena=chg,
             status=("iznad" if w > lim else "blizu" if w > lim - 0.002 else "ispod") if h else "nema"))
 
+    epizode = {f: breach_episodes(f, Hidx, NAV, KO, days) for f in ("PBZ_B", "ER_B", "AZ_B")}
+
     # ---- scenariji cijene (NAV fonda prati vlastitu poziciju KOEI)
     cur = KO[days[-1]]["vwap"]
     step = 50 if cur > 300 else 5
@@ -446,7 +505,7 @@ def compute(status):
         blokovi=blocks[:40], dogadaji=events, top10=t10,
         rezultati=dict(svi=RESULTS, zadnji=RESULTS[-1], sljedeci=NEXT_RESULTS,
                        zatvoreno_od=(date.fromisoformat(NEXT_RESULTS[0]) - timedelta(days=30)).isoformat()),
-        mar=mar, gs=GS, izvori_status={k: v for k, v in status.items() if not k.startswith("_")},
+        mar=mar, epizode=epizode, gs=GS, izvori_status={k: v for k, v in status.items() if not k.startswith("_")},
         shares_out=shares_out["KOEI"], limit=LIMIT,
         moguca_podjela=abs(KO[last]["vwap"] / KO[days[-2]]["vwap"] - 1) > 0.5,
     )

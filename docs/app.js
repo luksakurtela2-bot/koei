@@ -81,6 +81,7 @@ function render(D) {
 
   renderPrices(D, B);
   renderGauges(B);
+  renderEpisodes(D);
   initCalc();
   renderChart(180);
   renderEvents(D);
@@ -241,6 +242,33 @@ function renderChart(days) {
 document.querySelectorAll(".range button").forEach((b) => b.addEventListener("click", () => {
   document.querySelectorAll(".range button").forEach((x) => x.setAttribute("aria-pressed", x === b)); renderChart(+b.dataset.r);
 }));
+
+// ---------------------------------------------------------------- razdoblja iznad 5 %
+function renderEpisodes(D) {
+  const E = D.epizode || {};
+  const pbz = E.PBZ_B || [];
+  const longest = pbz.reduce((m, e) => (!m || e.dana > m.dana ? e : m), null);
+  $("#ep-note").textContent = "Razdoblja u kojima je udio (dionice × dnevni VWAP ÷ NAV) bio iznad 5 %, s cijenom na dan ulaska. " +
+    "PBZ CO prodaje u danima nakon objave rezultata; kraći prelasci između objava prošli su bez prodaje." +
+    (longest && longest.dana > 63 ? ` Rok od 3 mjeseca u praksi nije strog: PBZ CO B bio je iznad 5 % od ${dt(longest.od, true)} do ${longest.do ? dt(longest.do, true) : "danas"} (${longest.dana} trgovinskih dana).` : "");
+  const kraj = (e) => e.kraj === "traje" ? `<b>traje</b>${e.prodano ? `<small>prodano ${fmt(e.prodano)}</small>` : ""}`
+    : e.kraj === "prodaja" ? `prodajom${e.prodano ? `<small>${fmt(e.prodano)} dionica</small>` : ""}`
+    : `${e.kraj === "pad cijene" ? "padom cijene" : "rastom NAV-a"}${e.prodano ? `<small>prodano ${fmt(e.prodano)}</small>` : ""}`;
+  const row = (e) => `<tr class="${e.kraj === "traje" ? "now" : ""}"><td><span class="nw">${e.tocno ? "" : "≈ "}${dt(e.od, true)}</span><small>${e.do ? "do " + dt(e.do, e.do.slice(0, 4) !== e.od.slice(0, 4)) : "do danas"}</small></td>` +
+    `<td>${e.dana}${!e.tocno && e.sigurno_dana !== e.dana ? `<small>sig. ${e.sigurno_dana}</small>` : ""}</td><td class="nw">${eur(e.vwap_ulaz)}</td>` +
+    `<td>${pct(e.max_udio)}<small>${dt(e.max_dan)} uz ${eur(e.vwap_max)}</small></td><td>${kraj(e)}</td></tr>`;
+  const head = `<thead><tr><th>Iznad od</th><th>Trg. dana</th><th>VWAP na ulazu</th><th>Najviše</th><th>Kraj</th></tr></thead>`;
+  $("#eps").innerHTML = ["PBZ_B", "ER_B", "AZ_B"].filter((f) => (E[f] || []).length).map((f) => {
+    const all = E[f].map(row), first = 5;
+    return `<h3 class="ep-f">${NAME[f]}</h3><div class="tbl-wrap"><table class="tbl ep-tbl" data-f="${f}">${head}<tbody>${all.slice(0, first).join("")}</tbody></table></div>` +
+      (all.length > first ? `<button class="more" type="button" data-f="${f}">Prikaži još ${all.length - first}</button>` : "");
+  }).join("");
+  $("#eps").querySelectorAll("button.more").forEach((b) => b.addEventListener("click", () => {
+    $(`#eps table[data-f="${b.dataset.f}"] tbody`).innerHTML = E[b.dataset.f].map(row).join(""); b.remove();
+  }));
+  $("#ep-foot").textContent = "≈ dio razdoblja temelji se na mjesečnim izvješćima fonda: dani prodaje unutar mjeseca nisu poznati, pa su „trg. dana” dani kad je udio mogao biti iznad 5 % („sig.” = dani u kojima je sigurno bio iznad). " +
+    "Kraj „padom cijene” znači da bi i uz nepromijenjeno stanje dionica udio pao ispod 5 %. Od studenoga 2025. PBZ CO je točan po danu (obavijesti o transakcijama i SKDD).";
+}
 
 // ---------------------------------------------------------------- događaji
 function renderEvents(D) {

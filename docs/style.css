@@ -181,3 +181,13 @@ input[type=range] { width: 100%; margin: 14px 0 4px; accent-color: var(--limit);
 .px-tbl tr.trig td:first-child small { color: var(--limit); }
 .px-tbl tr.trig td:first-child b { color: var(--limit); }
 #px-more { margin-top: 8px; }
+
+/* razdoblja iznad 5 % */
+.ep-f { font-size: 15px; font-weight: 600; margin: 22px 0 6px; }
+.ep-f:first-child { margin-top: 4px; }
+.ep-tbl td small { display: block; font-size: 11.5px; color: var(--ink-3); }
+.ep-tbl td:last-child, .ep-tbl th:last-child { text-align: left; padding-left: 16px; }
+.ep-tbl tr.now td { font-weight: 600; }
+.ep-tbl tr.now td small { font-weight: 400; }
+.ep-tbl .nw { white-space: nowrap; }
+.ep-tbl td small { white-space: normal; }
