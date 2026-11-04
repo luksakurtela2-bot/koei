@@ -1,20 +1,22 @@
 objava,objavljeno,fond,trg,vrsta,kolicina,cijena,provjera
-64049,2025-11-11 08:58,PBZ_B,2025-11-04,?,,661.45,nepročitan volumen
-64049,2025-11-11 08:58,PBZ_B,2025-11-06,?,,657.94,nepročitan volumen
-64049,2025-11-11 08:58,PBZ_B,2025-11-07,?,,660.0,nepročitan volumen
-64090,2025-11-14 10:08,PBZ_B,2025-11-11,?,,658.0,nepročitan volumen
-64090,2025-11-14 10:08,PBZ_B,2025-11-12,?,,660.0,nepročitan volumen
-64172,2025-11-24 12:55,PBZ_B,2025-11-20,?,,652.0,nepročitan volumen
-64172,2025-11-24 12:55,PBZ_B,2025-11-21,?,,644.0,nepročitan volumen
-64225,2025-11-28 12:35,PBZ_B,2025-11-24,?,,650.0,nepročitan volumen
-64225,2025-11-28 12:35,PBZ_B,2025-11-25,?,,647.61,nepročitan volumen
+64049,2025-11-11 08:58,PBZ_B,2025-11-04,?,365,661.45,nepoznata vrsta transakcije
+64049,2025-11-11 08:58,PBZ_B,2025-11-06,?,136,657.94,nepoznata vrsta transakcije
+64049,2025-11-11 08:58,PBZ_B,2025-11-07,?,104,660.0,nepoznata vrsta transakcije
+64090,2025-11-14 10:08,PBZ_B,2025-11-11,?,593,658.0,nepoznata vrsta transakcije
+64172,2025-11-24 12:55,PBZ_B,2025-11-20,?,60,652.0,nepoznata vrsta transakcije
+64172,2025-11-24 12:55,PBZ_B,2025-11-21,?,113,644.0,nepoznata vrsta transakcije
+64225,2025-11-28 12:35,PBZ_B,2025-11-24,?,32,650.0,nepoznata vrsta transakcije
+64225,2025-11-28 12:35,PBZ_B,2025-11-25,?,256,647.61,nepoznata vrsta transakcije
 64292,2025-12-04 13:25,PBZ_B,2025-12-03,?,35593,650.0,nepoznata vrsta transakcije
 64320,2025-12-09 15:05,PBZ_A,2025-12-08,kupnja,6800,666.0,ok
-64433,2025-12-16 09:50,PBZ_B,2025-12-10,?,,686.62,nepročitan volumen
-64433,2025-12-16 09:50,PBZ_B,2025-12-11,?,,690.79,nepročitan volumen
-64433,2025-12-16 09:50,PBZ_B,2025-12-12,?,4312,690.0,nepročitan volumen
-64545,2025-12-24 09:05,PBZ_B,2025-12-19,?,,700.0,nepročitan volumen
-64545,2025-12-24 09:05,PBZ_B,2025-12-23,?,,706.0,nepročitan volumen
+64433,2025-12-16 09:50,PBZ_B,2025-12-10,?,117,686.62,nepoznata vrsta transakcije
+64433,2025-12-16 09:50,PBZ_B,2025-12-11,?,799,690.79,nepoznata vrsta transakcije
+64433,2025-12-16 09:50,PBZ_B,2025-12-12,?,1073,691.85,nepoznata vrsta transakcije
+64433,2025-12-16 09:50,PBZ_B,2025-12-12,?,4312,690.0,nepoznata vrsta transakcije
+64545,2025-12-24 09:05,PBZ_B,2025-12-19,?,934,700.0,nepoznata vrsta transakcije
+64545,2025-12-24 09:05,PBZ_B,2025-12-23,?,238,706.0,nepoznata vrsta transakcije
+64581,2025-12-31 12:28,PBZ_B,2025-12-29,?,500,708.0,nepoznata vrsta transakcije
+64581,2025-12-31 12:28,PBZ_B,2025-12-30,?,2080,704.85,nepoznata vrsta transakcije
 64592,2026-01-07 11:29,PBZ_B,2026-01-02,prodaja,356,712.0,ok
 64592,2026-01-07 11:29,PBZ_B,2026-01-05,prodaja,500,710.73,ok
 64609,2026-01-09 13:36,PBZ_B,2026-01-07,prodaja,700,710.0,ok
@@ -28,17 +30,17 @@ objava,objavljeno,fond,trg,vrsta,kolicina,cijena,provjera
 64652,2026-01-19 12:24,PBZ_B,2026-01-14,prodaja,,737.78,nepročitan volumen
 64652,2026-01-19 12:24,PBZ_B,2026-01-15,prodaja,,742.16,nepročitan volumen
 64652,2026-01-19 12:24,PBZ_B,2026-01-16,prodaja,,745.65,nepročitan volumen
-64695,2026-01-27 11:48,PBZ_B,2026-01-22,prodaja,,747.96,nepročitan volumen
-64695,2026-01-27 11:48,PBZ_B,2026-01-23,prodaja,,749.06,nepročitan volumen
-64695,2026-01-27 11:48,PBZ_B,2026-01-23,prodaja,,748.0,nepročitan volumen
-64695,2026-01-27 11:48,PBZ_B,2026-01-26,prodaja,,758.1,nepročitan volumen
-65390,2026-03-02 14:50,PBZ_B,2026-02-26,prodaja,250,820.0,ok (jedan volumen iz zbirnog)
-65390,2026-03-02 14:50,PBZ_B,2026-02-27,prodaja,1705,805.76,ok (jedan volumen iz zbirnog)
-65390,2026-03-02 14:50,PBZ_B,2026-02-27,prodaja,5583,796.0,ok (jedan volumen iz zbirnog)
+64695,2026-01-27 11:48,PBZ_B,2026-01-22,prodaja,221,747.96,ok (jedan volumen iz zbirnog)
+64695,2026-01-27 11:48,PBZ_B,2026-01-23,prodaja,735,749.06,ok (jedan volumen iz zbirnog)
+64695,2026-01-27 11:48,PBZ_B,2026-01-23,prodaja,700,748.0,ok (jedan volumen iz zbirnog)
+64695,2026-01-27 11:48,PBZ_B,2026-01-26,prodaja,2000,758.1,ok (jedan volumen iz zbirnog)
+65390,2026-03-02 14:50,PBZ_B,2026-02-26,prodaja,250,820.0,ok
+65390,2026-03-02 14:50,PBZ_B,2026-02-27,prodaja,1705,805.76,ok
+65390,2026-03-02 14:50,PBZ_B,2026-02-27,prodaja,5583,796.0,ok
 65444,2026-03-06 11:52,PBZ_B,2026-03-04,prodaja,31,800.0,ok
 65444,2026-03-06 11:52,PBZ_B,2026-03-05,prodaja,459,784.0,ok
 65444,2026-03-06 11:52,PBZ_B,2026-03-05,prodaja,741,782.0,ok
-65490,2026-03-11 17:05,PBZ_B,2026-03-06,prodaja,89,794.0,ok (jedan volumen iz zbirnog)
+65490,2026-03-11 17:05,PBZ_B,2026-03-06,prodaja,89,794.0,ok
 66875,2026-05-05 15:08,PBZ_B,2026-04-30,prodaja,104,832.23,ok
 66875,2026-05-05 15:08,PBZ_B,2026-05-04,prodaja,153,831.99,ok
 66911,2026-05-08 15:08,PBZ_B,2026-05-05,prodaja,285,828.5,ok
@@ -53,36 +55,36 @@ objava,objavljeno,fond,trg,vrsta,kolicina,cijena,provjera
 66961,2026-05-15 08:19,PBZ_B,2026-05-13,prodaja,1500,855.0,ok (jedan volumen iz zbirnog)
 66961,2026-05-15 08:19,PBZ_B,2026-05-13,prodaja,1000,848.73,ok (jedan volumen iz zbirnog)
 66961,2026-05-15 08:19,PBZ_B,2026-05-13,prodaja,1000,855.11,ok (jedan volumen iz zbirnog)
-67046,2026-05-19 12:19,PBZ_B,2026-05-14,prodaja,1599,877.01,ok
-67046,2026-05-19 12:19,PBZ_B,2026-05-14,prodaja,1800,875.0,ok
-67046,2026-05-19 12:19,PBZ_B,2026-05-14,prodaja,800,875.0,ok
-67046,2026-05-19 12:19,PBZ_B,2026-05-15,prodaja,3330,883.59,ok
-67046,2026-05-19 12:19,PBZ_B,2026-05-15,prodaja,2457,881.76,ok
-67046,2026-05-19 12:19,PBZ_B,2026-05-15,prodaja,3479,878.72,ok
-67046,2026-05-19 12:19,PBZ_B,2026-05-18,prodaja,1611,904.68,ok
-67046,2026-05-19 12:19,PBZ_B,2026-05-18,prodaja,720,905.0,ok
+67046,2026-05-19 12:19,PBZ_B,2026-05-14,prodaja,1599,877.01,ok (jedan volumen iz zbirnog)
+67046,2026-05-19 12:19,PBZ_B,2026-05-14,prodaja,1800,875.0,ok (jedan volumen iz zbirnog)
+67046,2026-05-19 12:19,PBZ_B,2026-05-14,prodaja,800,875.0,ok (jedan volumen iz zbirnog)
+67046,2026-05-19 12:19,PBZ_B,2026-05-15,prodaja,3330,883.59,ok (jedan volumen iz zbirnog)
+67046,2026-05-19 12:19,PBZ_B,2026-05-15,prodaja,2457,881.76,ok (jedan volumen iz zbirnog)
+67046,2026-05-19 12:19,PBZ_B,2026-05-15,prodaja,3479,878.72,ok (jedan volumen iz zbirnog)
+67046,2026-05-19 12:19,PBZ_B,2026-05-18,prodaja,1611,904.68,ok (jedan volumen iz zbirnog)
+67046,2026-05-19 12:19,PBZ_B,2026-05-18,prodaja,720,905.0,ok (jedan volumen iz zbirnog)
 67094,2026-05-22 12:13,PBZ_B,2026-05-19,prodaja,482,907.3,ok
 67094,2026-05-22 12:13,PBZ_B,2026-05-21,prodaja,213,907.0,ok
-67134,2026-05-27 11:37,PBZ_B,2026-05-22,prodaja,77,910.55,ok (jedan volumen iz zbirnog)
-67134,2026-05-27 11:37,PBZ_B,2026-05-22,prodaja,435,912.65,ok (jedan volumen iz zbirnog)
-67134,2026-05-27 11:37,PBZ_B,2026-05-25,prodaja,891,927.47,ok (jedan volumen iz zbirnog)
-67134,2026-05-27 11:37,PBZ_B,2026-05-26,prodaja,30,925.33,ok (jedan volumen iz zbirnog)
+67134,2026-05-27 11:37,PBZ_B,2026-05-22,prodaja,77,910.55,ok
+67134,2026-05-27 11:37,PBZ_B,2026-05-22,prodaja,435,912.65,ok
+67134,2026-05-27 11:37,PBZ_B,2026-05-25,prodaja,891,927.47,ok
+67134,2026-05-27 11:37,PBZ_B,2026-05-26,prodaja,30,925.33,ok
 67218,2026-06-02 13:51,PBZ_B,2026-05-28,prodaja,1692,930.0,ok
 67218,2026-06-02 13:51,PBZ_B,2026-05-29,prodaja,1000,935.0,ok
 67218,2026-06-02 13:51,PBZ_B,2026-05-29,prodaja,458,932.79,ok
 67218,2026-06-02 13:51,PBZ_B,2026-05-29,prodaja,2000,937.84,ok
 67218,2026-06-02 13:51,PBZ_B,2026-05-29,prodaja,412,960.0,ok
 67218,2026-06-02 13:51,PBZ_B,2026-06-01,prodaja,277,1000.0,ok
-67272,2026-06-08 08:13,PBZ_B,2026-06-02,prodaja,266,1050.0,ok (jedan volumen iz zbirnog)
+67272,2026-06-08 08:13,PBZ_B,2026-06-02,prodaja,266,1050.0,ok
 68332,2026-08-10 15:18,PBZ_B,2026-07-31,prodaja,542,1011.84,ok (jedan volumen iz zbirnog)
 68332,2026-08-10 15:18,PBZ_B,2026-08-03,prodaja,841,1011.21,ok (jedan volumen iz zbirnog)
 68332,2026-08-10 15:18,PBZ_B,2026-08-04,prodaja,784,1010.03,ok (jedan volumen iz zbirnog)
-68347,2026-08-12 09:12,PBZ_B,2026-08-06,prodaja,3221,1009.98,ok (jedan volumen iz zbirnog)
-68347,2026-08-12 09:12,PBZ_B,2026-08-06,prodaja,450,1008.0,ok (jedan volumen iz zbirnog)
-68347,2026-08-12 09:12,PBZ_B,2026-08-07,prodaja,2000,1009.25,ok (jedan volumen iz zbirnog)
-68347,2026-08-12 09:12,PBZ_B,2026-08-10,prodaja,1039,1010.57,ok (jedan volumen iz zbirnog)
-68347,2026-08-12 09:12,PBZ_B,2026-08-10,prodaja,1000,1010.0,ok (jedan volumen iz zbirnog)
-68430,2026-08-24 15:43,PBZ_B,2026-08-19,prodaja,130,1050.0,ok (jedan volumen iz zbirnog)
+68347,2026-08-12 09:12,PBZ_B,2026-08-06,prodaja,3221,1009.98,ok
+68347,2026-08-12 09:12,PBZ_B,2026-08-06,prodaja,450,1008.0,ok
+68347,2026-08-12 09:12,PBZ_B,2026-08-07,prodaja,2000,1009.25,ok
+68347,2026-08-12 09:12,PBZ_B,2026-08-10,prodaja,1039,1010.57,ok
+68347,2026-08-12 09:12,PBZ_B,2026-08-10,prodaja,1000,1010.0,ok
+68430,2026-08-24 15:43,PBZ_B,2026-08-19,prodaja,130,1050.0,ok
 69600,2026-11-04 17:06,PBZ_B,2026-10-30,prodaja,685,1150.6,ok
 69600,2026-11-04 17:06,PBZ_B,2026-11-02,prodaja,722,1143.92,ok
 69600,2026-11-04 17:06,PBZ_B,2026-11-02,prodaja,149,1146.12,ok
