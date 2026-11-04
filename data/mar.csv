@@ -1,22 +1,23 @@
 objava,objavljeno,fond,trg,vrsta,kolicina,cijena,provjera
-64049,2025-11-11 08:58,PBZ_B,2025-11-04,?,365,661.45,nepoznata vrsta transakcije
-64049,2025-11-11 08:58,PBZ_B,2025-11-06,?,136,657.94,nepoznata vrsta transakcije
-64049,2025-11-11 08:58,PBZ_B,2025-11-07,?,104,660.0,nepoznata vrsta transakcije
-64090,2025-11-14 10:08,PBZ_B,2025-11-11,?,593,658.0,nepoznata vrsta transakcije
-64172,2025-11-24 12:55,PBZ_B,2025-11-20,?,60,652.0,nepoznata vrsta transakcije
-64172,2025-11-24 12:55,PBZ_B,2025-11-21,?,113,644.0,nepoznata vrsta transakcije
-64225,2025-11-28 12:35,PBZ_B,2025-11-24,?,32,650.0,nepoznata vrsta transakcije
-64225,2025-11-28 12:35,PBZ_B,2025-11-25,?,256,647.61,nepoznata vrsta transakcije
-64292,2025-12-04 13:25,PBZ_B,2025-12-03,?,35593,650.0,nepoznata vrsta transakcije
+64049,2025-11-11 08:58,PBZ_B,2025-11-04,prodaja,365,661.45,ok
+64049,2025-11-11 08:58,PBZ_B,2025-11-06,prodaja,136,657.94,ok
+64049,2025-11-11 08:58,PBZ_B,2025-11-07,prodaja,104,660.0,ok
+64090,2025-11-14 10:08,PBZ_B,2025-11-11,prodaja,593,658.0,ok (jedan volumen iz zbirnog) (spojeno iz više OCR prolaza)
+64090,2025-11-14 10:08,PBZ_B,2025-11-12,prodaja,100,660.0,ok (jedan volumen iz zbirnog) (spojeno iz više OCR prolaza)
+64172,2025-11-24 12:55,PBZ_B,2025-11-20,prodaja,60,652.0,ok
+64172,2025-11-24 12:55,PBZ_B,2025-11-21,prodaja,113,644.0,ok
+64225,2025-11-28 12:35,PBZ_B,2025-11-24,prodaja,32,650.0,ok
+64225,2025-11-28 12:35,PBZ_B,2025-11-25,prodaja,256,647.61,ok
+64292,2025-12-04 13:25,PBZ_B,2025-12-03,prodaja,35593,650.0,ok
 64320,2025-12-09 15:05,PBZ_A,2025-12-08,kupnja,6800,666.0,ok
-64433,2025-12-16 09:50,PBZ_B,2025-12-10,?,117,686.62,nepoznata vrsta transakcije
-64433,2025-12-16 09:50,PBZ_B,2025-12-11,?,799,690.79,nepoznata vrsta transakcije
-64433,2025-12-16 09:50,PBZ_B,2025-12-12,?,1073,691.85,nepoznata vrsta transakcije
-64433,2025-12-16 09:50,PBZ_B,2025-12-12,?,4312,690.0,nepoznata vrsta transakcije
-64545,2025-12-24 09:05,PBZ_B,2025-12-19,?,934,700.0,nepoznata vrsta transakcije
-64545,2025-12-24 09:05,PBZ_B,2025-12-23,?,238,706.0,nepoznata vrsta transakcije
-64581,2025-12-31 12:28,PBZ_B,2025-12-29,?,500,708.0,nepoznata vrsta transakcije
-64581,2025-12-31 12:28,PBZ_B,2025-12-30,?,2080,704.85,nepoznata vrsta transakcije
+64433,2025-12-16 09:50,PBZ_B,2025-12-10,prodaja,117,686.62,ok (jedan volumen iz zbirnog)
+64433,2025-12-16 09:50,PBZ_B,2025-12-11,prodaja,799,690.79,ok (jedan volumen iz zbirnog)
+64433,2025-12-16 09:50,PBZ_B,2025-12-12,prodaja,1073,691.85,ok (jedan volumen iz zbirnog)
+64433,2025-12-16 09:50,PBZ_B,2025-12-12,prodaja,4312,690.0,ok (jedan volumen iz zbirnog)
+64545,2025-12-24 09:05,PBZ_B,2025-12-19,prodaja,934,700.0,ok
+64545,2025-12-24 09:05,PBZ_B,2025-12-23,prodaja,238,706.0,ok
+64581,2025-12-31 12:28,PBZ_B,2025-12-29,prodaja,500,708.0,ok
+64581,2025-12-31 12:28,PBZ_B,2025-12-30,prodaja,2080,704.85,ok
 64592,2026-01-07 11:29,PBZ_B,2026-01-02,prodaja,356,712.0,ok
 64592,2026-01-07 11:29,PBZ_B,2026-01-05,prodaja,500,710.73,ok
 64609,2026-01-09 13:36,PBZ_B,2026-01-07,prodaja,700,710.0,ok
@@ -76,9 +77,9 @@ objava,objavljeno,fond,trg,vrsta,kolicina,cijena,provjera
 67218,2026-06-02 13:51,PBZ_B,2026-05-29,prodaja,412,960.0,ok
 67218,2026-06-02 13:51,PBZ_B,2026-06-01,prodaja,277,1000.0,ok
 67272,2026-06-08 08:13,PBZ_B,2026-06-02,prodaja,266,1050.0,ok
-68332,2026-08-10 15:18,PBZ_B,2026-07-31,prodaja,542,1011.84,ok (jedan volumen iz zbirnog)
-68332,2026-08-10 15:18,PBZ_B,2026-08-03,prodaja,841,1011.21,ok (jedan volumen iz zbirnog)
-68332,2026-08-10 15:18,PBZ_B,2026-08-04,prodaja,784,1010.03,ok (jedan volumen iz zbirnog)
+68332,2026-08-10 15:18,PBZ_B,2026-07-31,prodaja,542,1011.84,ok (jedan volumen iz zbirnog) (spojeno iz više OCR prolaza)
+68332,2026-08-10 15:18,PBZ_B,2026-08-03,prodaja,841,1011.21,ok (jedan volumen iz zbirnog) (spojeno iz više OCR prolaza)
+68332,2026-08-10 15:18,PBZ_B,2026-08-04,prodaja,784,1010.03,ok (jedan volumen iz zbirnog) (spojeno iz više OCR prolaza)
 68347,2026-08-12 09:12,PBZ_B,2026-08-06,prodaja,3221,1009.98,ok
 68347,2026-08-12 09:12,PBZ_B,2026-08-06,prodaja,450,1008.0,ok
 68347,2026-08-12 09:12,PBZ_B,2026-08-07,prodaja,2000,1009.25,ok
