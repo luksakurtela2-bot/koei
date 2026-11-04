@@ -26,15 +26,16 @@ DRUSTVA = [("PBZ CROATIA OSIGURANJE", "PBZ"), ("ERSTE", "ER"), ("RAIFFEISEN", "R
 def lista(ticker="KOEI", od="0000-00-00", max_stranica=30):
     """Prijave transakcija rukovoditelja izdavatelja, najnovije prve: [{id, objavljeno, pdf}] objavljene od `od`."""
     qs = urllib.parse.urlencode({f"{Q}[query]": ticker, f"{Q}[filter]": "ticker"})
-    out, seen, chash = [], set(), ""
+    out, seen, nxt = [], set(), None
     for s in range(1, max_stranica + 1):
-        url = f"{BASE}/obavijesti-izdavatelja/search{'' if s == 1 else f'/{s}'}?{qs}{chash}"
+        url = f"{BASE}/obavijesti-izdavatelja/search?{qs}" if s == 1 else nxt.replace("/search/2?", f"/search/{s}?")
         h = _get(url).decode("utf-8", "replace")
         if s == 1:
             if "list-group-item" not in h:
                 raise ValueError("neočekivan format popisa obavijesti na eho.zse.hr")
-            m = re.search(r"cHash=([0-9a-f]+)", h)          # TYPO3 traži cHash za ostale stranice
-            chash = f"&cHash={m.group(1)}" if m else ""
+            # ostale stranice: točno kao poveznica na 2. stranicu (TYPO3 cHash ovisi o redoslijedu parametara)
+            m = re.search(r'href="(/obavijesti-izdavatelja/search/2\?[^"]+)"', h)
+            nxt = BASE + m.group(1).replace("&amp;", "&") if m else None
         stari = False
         for blk in h.split('class="list-group-item')[1:]:
             m = re.search(r"(\d\d\.\d\d\.\d{4})\.\s+(\d\d:\d\d)\s*<span[^>]*>&ndash;\s*([^<]*)</span>", blk)
@@ -49,7 +50,7 @@ def lista(ticker="KOEI", od="0000-00-00", max_stranica=30):
             if m.group(3).strip() == NASLOV and v.group(1) not in seen and p:
                 seen.add(v.group(1))
                 out.append(dict(id=v.group(1), objavljeno=kad, pdf=BASE + p.group(1)))
-        if stari or "list-group-item" not in h:
+        if stari or not nxt or "list-group-item" not in h:
             break
     return out
 
