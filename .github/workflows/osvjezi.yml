@@ -26,6 +26,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Alati (PDF; OCR za skenirane MAR obavijesti)
+        run: |
+          pip install -q pymupdf==1.26.3
+          if [ "${{ github.event.schedule }}" != "47 7-14 * * 1-5" ]; then
+            sudo apt-get install -y -qq tesseract-ocr tesseract-ocr-hrv > /dev/null
+          fi
       - name: Dohvat i izračun
         run: |
           if [ "${{ github.event.schedule }}" = "47 7-14 * * 1-5" ]; then python pipeline/run.py --brzo; else python pipeline/run.py; fi

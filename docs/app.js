@@ -50,7 +50,8 @@ function render(D) {
   const pcLbl = L ? `cijenu sada (${L.vrijeme}, ${eur(pc, 2)})` : `zadnju zaključnu cijenu (${dt(k.datum)}, ${eur(pc, 2)})`;
   const S0 = scenario(pc);
   const sellers = S0.rows.filter((x) => x.n5 > 0).sort((a, b) => b.n5 - a.n5);
-  const lagF = B.filter((f) => f.dionica_trg && f.dionica_trg < f.nav_date && f.status === "iznad");
+  const marF = B.filter((f) => f.dionica_izvor.startsWith("MAR"));
+  const lagF = B.filter((f) => f.dionica_trg && f.dionica_trg < f.nav_date && f.status === "iznad" && !marF.includes(f));
   const lagD = lagF.length ? lagF.map((f) => f.dionica_trg).sort()[0] : null;
   const az = B.find((f) => f.id === "AZ_B");
   const minPrag = Math.min(...B.filter((f) => f.dionica > 0 && f.prag_cijena).map((f) => f.prag_cijena));
@@ -63,7 +64,7 @@ function render(D) {
     ? `<p>To je najmanje koliko trebaju prodati da im KOEI padne na 5 % neto imovine fonda (zakonski limit), uz ${pcLbl}: ${mil(S0.t5 * pc)} ili ${pct(S0.t5 / D.shares_out, 1)} Končara. Ako se spuste na 4,9 %, kao PBZ CO u prosincu 2025., to je ${fmt(S0.t49)} dionica.</p>`
     : `<p>Ispod ${eur(minPrag, 1)} nitko ne mora prodavati; zadnja cijena je ${eur(pc, 2)}.</p>`)
     + `<ul class="split">${rows.join("")}</ul>`
-    + `<p class="small">NAV fondova od ${dt(navDate, true)}; pozicije iz SKDD-a${lagD ? ` za trgovine do ${dt(lagD, true)} Ako su fondovi prodavali nakon toga, to se još ne vidi (SKDD kasni 2 radna dana) i ostatak je manji.` : "."} Broj se mijenja s cijenom – tablica ispod.</p>`;
+    + `<p class="small">NAV fondova od ${dt(navDate, true)}; pozicije iz SKDD-a${marF.length ? `, a za ${marF.map((f) => NAME[f.id]).join(" i ")} iz obavijesti o transakcijama na ZSE (trgovine do ${dt(marF[0].dionica_trg, true)})` : ""}${lagD ? `${marF.length ? "; za ostale" : ""} za trgovine do ${dt(lagD, true)} Ako su prodavali nakon toga, to se još ne vidi (SKDD kasni 2 radna dana) i ostatak je manji.` : "."} Broj se mijenja s cijenom – tablica ispod.</p>`;
   const ageH = (Date.now() - new Date(D.generirano)) / 36e5;
   const staleNav = B.filter((f) => f.nav_date < navDate && !f.id.startsWith("PBZ")).map((f) => `${NAME[f.id]} (${dt(f.nav_date)})`);
   const warn = [];
@@ -87,7 +88,7 @@ function render(D) {
   renderCal(D);
   renderOthers(D);
   renderMethod(D);
-  $("#foot").innerHTML = `Osobni alat za praćenje, ne savjet za ulaganje. Izvori: ZSE, SKDD (preko MojeDionice), NAV sa stranica AZ, Erste Plavi, PBZ CO i Raiffeisen, obavijesti PBZ CO (do 3. 11. 2026.). Podaci kasne 1–2 radna dana.`;
+  $("#foot").innerHTML = `Osobni alat za praćenje, ne savjet za ulaganje. Izvori: ZSE, SKDD (preko MojeDionice), NAV sa stranica AZ, Erste Plavi, PBZ CO i Raiffeisen, obavijesti o transakcijama PBZ CO (eho.zse.hr). Podaci kasne 1–2 radna dana.`;
 }
 
 // ---------------------------------------------------------------- količine po cijeni
@@ -308,7 +309,7 @@ function renderMethod(D) {
   <p><b>Limit.</b> Obvezni mirovinski fond A ili B smije u dionice jednog izdavatelja uložiti najviše 5 % neto imovine (ZOMF čl. 127. st. 2.; C: 3 %). Kad udio prijeđe limit bez kupnje (rast cijene ili pad ostatka portfelja – prema uobičajenom tumačenju čl. 135. st. 2.), fond ga mora uskladiti u razumnom roku, najviše 3 mjeseca, uz moguće produljenje HANFA-e za još 3. Grupa KOEI + KODT smije najviše 10 %. Vlasnički limiti (20 % po fondu) ne ovise o cijeni.</p>
   <p><b>Izračun.</b> Udio = broj dionica × dnevni VWAP kontinuiranog trgovanja na ZSE (bez blokova i OTC-a) ÷ dnevni NAV fonda. Fondovi vrednuju KOEI po tom VWAP-u (provjereno za PBZ CO, AZ i Erste na više krajeva mjeseci, uključujući dane s blok-transakcijama). Višak = dionice − 5 % × NAV ÷ VWAP. Kod scenarija i praga cijene NAV raste zajedno s vlastitom pozicijom KOEI.</p>
   <ul>
-    <li><b>Pozicije</b>: SKDD preko MojeDionice (prvih 5 dioničara, po datumu trgovanja T, vidljivo T+2). PBZ CO prijavljuje transakcije jer je predsjednica Uprave članica NO Končara (MAR čl. 19.); te su obavijesti ugrađene do 3. 11. 2026., a usporedba s izvješćima fonda pokazuje manje neobjašnjene razlike. Pozicije označene kao procjena izvedene su iz mjesečnih izvješća (±0,2 %).</li>
+    <li><b>Pozicije</b>: SKDD preko MojeDionice (prvih 5 dioničara, po datumu trgovanja T, vidljivo T+2). PBZ CO prijavljuje transakcije jer je predsjednica Uprave članica NO Končara (MAR čl. 19.); obavijesti se dva puta dnevno preuzimaju s eho.zse.hr (skenirane čita OCR) i prihvaćaju samo ako se retci slažu sa zbirnim volumenom i prosječnom cijenom iz iste obavijesti. Transakcije nakon zadnjeg SKDD stanja odmah ulaze u izračun; kad SKDD stigne, svaka promjena mora odgovarati zbroju obavijesti (inače je izvor označen kao greška). Pozicije označene kao procjena izvedene su iz mjesečnih izvješća (±0,2 %).</li>
     <li><b>NAV</b>: dnevno sa stranica AZ, Erste Plavi, PBZ CO i Raiffeisen; na krajevima mjeseci jednak HANFA-inom.</li>
     <li><b>Cijene</b>: ZSE REST, kontinuirano trgovanje i blokovi odvojeno.</li>
     <li><b>Što se ne vidi</b>: transakcije zadnja 2 radna dana; Raiffeisen B i fondovi A nisu među prvih 5 dioničara, pa je njihova pozicija ručno upisana iz zadnjeg izvješća (datum u tablici). Promjena među dioničarima 6–10 javlja se obaviješću. Fondovi prekoračenja ne objavljuju pravovremeno, tek naknadno u godišnjim izvješćima.</li>
