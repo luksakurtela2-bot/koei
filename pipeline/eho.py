@@ -16,7 +16,7 @@ import pymupdf
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from sources import _get
 
-VERZIJA = 4                 # povećati kad se promijeni čitanje obavijesti → sve se ponovno pročitaju
+VERZIJA = 5                 # povećati kad se promijeni čitanje obavijesti → sve se ponovno pročitaju
 BASE = "https://eho.zse.hr"
 Q = "tx_issuerpublicationmanager_publicnewslisting"
 NASLOV = "Prijava transakcija rukovoditelja"
@@ -102,7 +102,7 @@ def _ocr(doc, psm="6", dpi=300, clean=True, tsv=False):
     return txt if tsv else "\n".join(txt)
 
 
-RX_DAT, RX_CIJ, RX_VOL = r"\d{1,2}\.\d{1,2}\.\d{4}\.?", r"\d{1,3}(?:\.\d{3})*,\d{2,4}", r"\d{1,3}(?:\.\d{3})*"
+RX_DAT, RX_CIJ, RX_VOL = r"\d{1,2}\.\d{1,2}\.\d{4}\.?", r"\d{1,3}(?:\.\d{3})*,\d{2,4}", r"\d{1,3}(?:\.\d{3})+|\d+"
 
 
 def _redci_tsv(doc):

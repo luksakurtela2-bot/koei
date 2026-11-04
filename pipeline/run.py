@@ -169,6 +169,10 @@ def update_mar(status):
     # obavijesti pročitane starijom verzijom parsera (E.VERZIJA) čitaju se ponovno
     stare = {r["objava"] for r in P if r.get("verzija") != str(E.VERZIJA)}
     P = [r for r in P if r["objava"] not in stare]; M = [r for r in M if r["objava"] not in stare]
+    # mar_rucno.csv: retci obavijesti koje OCR ne može pročitati (prepisani iz PDF-a); i oni moraju odgovarati zbirnim podacima
+    rucno = read_csv(D / "mar_rucno.csv")
+    stare |= {r["objava"] for r in P if r["objava"] in {x["objava"] for x in rucno} and "ručno" not in r["provjera"]}
+    P = [r for r in P if r["objava"] not in stare]; M = [r for r in M if r["objava"] not in stare]
     known = {r["objava"] for r in P}
     od = MAR_OD if not P or stare else max(MAR_OD, (date.fromisoformat(max(r["objavljeno"] for r in P)[:10]) - timedelta(days=45)).isoformat())
     errs = []
@@ -182,6 +186,11 @@ def update_mar(status):
                 errs.append(f"{ob['objavljeno'][:10]}: {e}")
                 continue
             f = E.fond(r["osoba"]) or ""
+            ruc = [x for x in rucno if x["objava"] == ob["id"]]
+            if f and ruc and not r["provjera"].startswith("ok"):     # ručno upisani retci – ista provjera prema zbirnim podacima
+                pr, rows = E._provjeri([dict(trg=x["trg"], vrsta=x["vrsta"], kolicina=int(x["kolicina"]), cijena=float(x["cijena"])) for x in ruc],
+                                       r["zbirno"], ruc[0]["vrsta"])
+                r = dict(r, rows=rows, provjera=pr + " (ručno upisano)" if pr.startswith("ok") else pr)
             zb = r["zbirno"] or ("", "")
             P.append(dict(objava=ob["id"], objavljeno=ob["objavljeno"], verzija=E.VERZIJA, fond=f, ocr="da" if r["ocr"] else "", provjera=r["provjera"],
                           redaka=len(r["rows"]), zbirni_volumen=zb[0], zbirna_cijena=zb[1], izmjena="da" if r["izmjena"] else "", pdf=ob["pdf"]))
