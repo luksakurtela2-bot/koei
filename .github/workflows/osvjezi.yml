@@ -5,7 +5,7 @@ on:
     - cron: "17 8 * * 1-5"    # 9:17 zimi / 10:17 ljeti (NAV od jučer)
     - cron: "23 17 * * 1-5"   # 18:23 zimi / 19:23 ljeti (nakon zatvaranja ZSE-a)
     - cron: "47 7-14 * * 1-5" # svaki sat tijekom trgovanja: samo cijena KOEI
-  workflow_dispatch:
+  workflow_dispatch:      # GitHub nakon prekida rada zna preskočiti zakazana pokretanja – tada ručno ili guranjem u pipeline/.github
   push:
     branches: [main]
     paths: ["pipeline/**", ".github/workflows/**"]
