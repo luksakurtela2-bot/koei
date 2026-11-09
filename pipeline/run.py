@@ -461,7 +461,7 @@ def compute(status):
             return None
         t = src["trg"]
         if src["tocno"] == "da" and f in zad.get("fondovi", []) and zad["trg"] > t:
-            t = min(zad["trg"], dn)
+            t = zad["trg"]
         return t
 
     funds = []
@@ -472,7 +472,8 @@ def compute(status):
         if not dn:
             continue
         nav, vw = navs[dn], KO[dn]["vwap"]
-        h, src = hold("KOEI", f, dn)
+        # zadnje poznato stanje (SKDD ili MAR), i kad je novije od NAV-a: prodaja ne mijenja NAV (dionice → novac)
+        h, src = hold("KOEI", f, "9999-12-31")
         lim = LIMIT_C if kat == "C" else LIMIT
         w = h * vw / nav if h else 0.0
         grp = (h * vw + hold("KODT", f, dn)[0] * last_px("KODT", dn) + hold("KODT2", f, dn)[0] * last_px("KODT2", dn)) / nav
