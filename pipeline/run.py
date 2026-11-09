@@ -40,6 +40,9 @@ NO_KOEI = ["AZ_C", "ER_C", "PBZ_C", "RF_C"]
 MUST_SEE = {"AZ_B", "PBZ_B", "ER_B"}   # moraju biti među prvih 5 na MojeDionicama
 OK = {"da", "razlika", "mar"}        # pozicije iz stvarnih transakcija (ne izvedene iz mjesečnih izvješća)
 MAR_OD = "2025-11-01"                 # MAR obavijesti fondova (eho.zse.hr) prate se od ovog datuma objave
+# PBZ CO prijavljivao je transakcije jer je Rosa Marić bila u NO Končara; ostavka 6. 11. 2026. (eho 69640, objavljeno 9. 11.)
+# → za trgovine nakon toga obavijesti više ne treba očekivati (provjera MAR ↔ SKDD vrijedi samo do tog dana)
+MAR_DO = {"PBZ_B": "2026-11-06", "PBZ_A": "2026-11-06"}
 
 
 # ================================================================ pomoćno
@@ -146,6 +149,10 @@ def update(status, quick=False):
                                          izvor=f"SKDD via MojeDionice (namira {snap['datum']})", tocno="da")
                                 H.append(r); new.append(r)
             last = snaps[-1]
+            # zadnja SKDD snimka potvrđuje i stanja koja se nisu promijenila (holdings.csv bilježi samo promjene)
+            zad = json.loads((D / "skdd_zadnje.json").read_text(encoding="utf-8")) if (D / "skdd_zadnje.json").exists() else {}
+            zad[papir] = dict(namira=last["datum"], trg=last["trg"], fondovi=sorted(found))
+            (D / "skdd_zadnje.json").write_text(json.dumps(zad, ensure_ascii=False, indent=1), encoding="utf-8")
             status[f"MojeDionice {papir}"] = f"ok (namira {last['datum']}, T {last['trg']})"
             if papir == "KOEI":
                 status["_top10"] = dict(datum=last["datum"], trg=last["trg"], ukupno=last["ukupno_top10"],
@@ -171,7 +178,7 @@ def update_mar(status):
     P = [r for r in P if r["objava"] not in stare]; M = [r for r in M if r["objava"] not in stare]
     # mar_rucno.csv: retci obavijesti koje OCR ne može pročitati (prepisani iz PDF-a); i oni moraju odgovarati zbirnim podacima
     rucno = read_csv(D / "mar_rucno.csv")
-    stare |= {r["objava"] for r in P if r["objava"] in {x["objava"] for x in rucno} and "ručno" not in r["provjera"]}
+    stare |= {r["objava"] for r in P if r["objava"] in {x["objava"] for x in rucno} and not r["provjera"].startswith("ok")}
     P = [r for r in P if r["objava"] not in stare]; M = [r for r in M if r["objava"] not in stare]
     known = {r["objava"] for r in P}
     od = MAR_OD if not P or stare else max(MAR_OD, (date.fromisoformat(max(r["objavljeno"] for r in P)[:10]) - timedelta(days=45)).isoformat())
@@ -245,6 +252,15 @@ def estimate_missing_nav(NAV, days, max_gap=10):
     return est
 
 
+def MAR_ROK(trg, n=5):
+    """Zadnji dan objave MAR obavijesti za trgovinu na dan trg: 3 radna dana prijava + 2 objava (praznici nisu uračunati → +1 dan zalihe)."""
+    d = date.fromisoformat(trg)
+    while n >= 0:
+        d += timedelta(days=1)
+        n -= d.weekday() < 5
+    return d.isoformat()
+
+
 def mar_after_skdd(Hidx, status):
     """Transakcije iz MAR obavijesti (provjera ok) nakon zadnjeg SKDD stanja fonda postaju nova stanja (tocno="mar").
     Usput: provjera MAR ↔ SKDD – svaka promjena SKDD stanja od početka MAR praćenja mora odgovarati zbroju MAR transakcija."""
@@ -253,17 +269,22 @@ def mar_after_skdd(Hidx, status):
         return dict(transakcije=[], neslaganja=[])
     start = min(r["trg"] for r in rows)
     sign = lambda r: (-1 if r["vrsta"] == "prodaja" else 1) * int(r["kolicina"]) * sf("KOEI", r["trg"])
-    diff, recent = [], []
+    diff, recent, ceka = [], [], []
+    today = zagreb_now().date().isoformat()
     for f in sorted({r["fond"] for r in rows}):
         lst = Hidx.setdefault(("KOEI", f), [])
         mine = [r for r in rows if r["fond"] == f]
         skdd = [r for r in lst if r["tocno"] in ("da", "razlika")]
         for a, b in zip(skdd, skdd[1:]):
-            if a["trg"] >= start:
+            if a["trg"] >= start and b["trg"] <= MAR_DO.get(f, "9999"):
                 exp = sum(sign(r) for r in mine if a["trg"] < r["trg"] <= b["trg"])
                 got = units(b, "KOEI") - units(a, "KOEI")
                 if exp != got and b["tocno"] != "razlika":
-                    diff.append(dict(fond=f, od=a["trg"], do=b["trg"], skdd=got, mar=exp))
+                    od1 = date.fromisoformat(a["trg"]) + timedelta(days=1)          # prvi dan nakon prethodnog stanja
+                    od1 += timedelta(days=max(0, 7 - od1.weekday()) if od1.weekday() > 4 else 0)
+                    x = dict(fond=f, od=od1.isoformat(), do=b["trg"], skdd=got, mar=exp, rok=MAR_ROK(b["trg"]))
+                    # MAR: rukovoditelj prijavljuje u 3 radna dana, izdavatelj objavljuje u još 2 → do tada nije greška
+                    (ceka if today <= x["rok"] else diff).append(x)
         if not lst:
             continue
         base, t0 = units(lst[-1], "KOEI"), lst[-1]["trg"]
@@ -281,9 +302,12 @@ def mar_after_skdd(Hidx, status):
             recent.append(dict(fond=f, trg=d, dionica=by[d]["n"], cijena=by[d]["eur"] / by[d]["kom"], objavljeno=by[d]["obj"]))
     if diff:
         status["MAR ↔ SKDD"] = "greška: " + "; ".join(f"{x['fond']} {x['od']}–{x['do']}: SKDD {x['skdd']:+}, MAR {x['mar']:+}" for x in diff[-3:])
+    elif ceka:
+        status["MAR ↔ SKDD"] = "ok (čeka obavijest: " + "; ".join(
+            f"{x['fond']} trgovine {x['od']}–{x['do']}: SKDD {x['skdd']:+}, objavljeno {x['mar']:+}, rok objave {x['rok']}" for x in ceka) + ")"
     else:
         status["MAR ↔ SKDD"] = "ok (slaže se)"
-    return dict(transakcije=recent, neslaganja=diff)
+    return dict(transakcije=recent, neslaganja=diff, ceka_obavijest=ceka)
 
 
 EPIZODE_OD = "2025-01-02"
@@ -414,6 +438,17 @@ def compute(status):
                 series={f: [None if v is None else round(v, 4) for v in s] for f, s in raw.items()}, approx=approx)
 
     # ---- stanje po fondu
+    zad = json.loads((D / "skdd_zadnje.json").read_text(encoding="utf-8")).get("KOEI", {}) if (D / "skdd_zadnje.json").exists() else {}
+
+    def potvrdeno(f, src, dn):
+        """Do kojeg je datuma trgovanja pozicija potvrđena: zadnja SKDD snimka u kojoj se fond vidi (i bez promjene) ili MAR obavijest."""
+        if not src:
+            return None
+        t = src["trg"]
+        if src["tocno"] == "da" and f in zad.get("fondovi", []) and zad["trg"] > t:
+            t = min(zad["trg"], dn)
+        return t
+
     funds = []
     for f in TRACK + NO_KOEI:
         drustvo, kat, _ = S.FUNDS[f]
@@ -438,7 +473,7 @@ def compute(status):
                 chg = dict(trg=b["trg"], delta=units(b, "KOEI") - units(a, "KOEI"))
         funds.append(dict(
             id=f, drustvo=drustvo, kat=kat, nav=nav, nav_date=dn, nav_procjena=dn in nav_est.get(f, set()), vwap=vw, dionica=h,
-            dionica_trg=src["trg"] if src else None, dionica_izvor=src["izvor"] if src else "ne drži KOEI",
+            dionica_trg=src["trg"] if src else None, potvrdeno_do=potvrdeno(f, src, dn), dionica_izvor=src["izvor"] if src else "ne drži KOEI",
             dionica_tocno=bool(src and src["tocno"] in OK), posto_izdanja=h / shares_out["KOEI"],
             vrijednost=h * vw, udio=w, limit=lim, udio_grupa=grp, prag_cijena=prag(nav, h, vw, lim),
             visak5=max(0.0, h - lim * nav / vw) if w > lim else 0.0,

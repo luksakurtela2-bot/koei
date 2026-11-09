@@ -8,7 +8,7 @@ on:
   workflow_dispatch:      # GitHub nakon prekida rada zna preskočiti zakazana pokretanja – tada ručno ili guranjem u pipeline/.github
   push:
     branches: [main]
-    paths: ["pipeline/**", ".github/workflows/**"]
+    paths: ["pipeline/**", ".github/workflows/**", "local/okidac.txt"]   # okidac.txt: lokalna rezerva (local/okidac.py)
 
 permissions:
   contents: write
