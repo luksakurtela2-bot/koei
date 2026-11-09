@@ -37,6 +37,16 @@ def main():
         d = json.loads(urllib.request.urlopen(req, timeout=30).read())
         for x in d["data"]["NAVrez"]:
             rows[(x["datum"][:10], fond)] = f"{float(x['NAV']):.2f}"
+    # Raiffeisen (rmf.hr) s GitHuba često istekne → i on se šalje odavde
+    for fond, sif in (("RF_A", "A"), ("RF_B", "B"), ("RF_C", "C")):
+        try:
+            u = (f"https://www.rmf.hr/Ajax.aspx?action=nav&sifra={sif}&tmpDateFrom={(date.today() - timedelta(days=14)):%d.%m.%Y}"
+                 f"&tmpDateTo={date.today():%d.%m.%Y}")
+            req = urllib.request.Request(u, headers={"User-Agent": "Mozilla/5.0 (KOEI-monitor; osobna uporaba)"})
+            for x in json.loads(urllib.request.urlopen(req, timeout=30).read())["VrijednostUdjelaVM"]:
+                rows[(datetime.strptime(x["Datum"].strip("."), "%d.%m.%Y").strftime("%Y-%m-%d"), fond)] = f"{float(x['ValueEur']):.2f}"
+        except Exception as e:
+            log(f"{fond}: {e}")
     OUT.parent.mkdir(exist_ok=True)
     with open(OUT, "w", newline="", encoding="utf-8") as f:
         w = csv.writer(f); w.writerow(["datum", "fond", "nav_eur"])

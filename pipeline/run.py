@@ -134,7 +134,7 @@ def update(status, quick=False):
     loc = read_csv(D / "nav_pbz.csv")
     for r in loc:
         nav[(r["datum"], r["fond"])] = r["nav_eur"]
-    for fund in ("PBZ_A", "PBZ_B", "PBZ_C"):
+    for fund in ("PBZ_A", "PBZ_B", "PBZ_C", "RF_A", "RF_B", "RF_C"):
         mine = [r["datum"] for r in loc if r["fond"] == fund]
         if mine and not status.get(f"NAV {fund}", "").startswith("ok"):
             status[f"NAV {fund}"] = f"ok (lokalno računalo, zadnji {max(mine)})"
