@@ -41,6 +41,20 @@ def zse_history(sym, frm="2023-01-01", to=None):
                   key=lambda r: (r["date"], r["model"]))
 
 
+def zse_live(sym="KOEI"):
+    """Današnje trgovanje sa stranice papira na zse.hr (kontinuirano trgovanje, kasni ~15 min) → dict ili None ako danas nema trgovanja.
+    REST povijest (zse_history) dan dodaje tek nakon zatvaranja."""
+    h = _get(f"https://zse.hr/hr/papir/310?isin={ISIN[sym]}", tries=2, timeout=30).decode("utf-8", "replace")
+    m = re.search(r'"TradingDay":"(\d{4}-\d\d-\d\d)T[^"]*"(.{0,1500}?)"block_high_price"', h, re.S)
+    if not m:
+        raise ValueError("na zse.hr nema podataka o trgovanju (promijenjen format stranice?)")
+    g = lambda k: (re.search(rf'"{k}":"?([\d.]+|null)"?', m.group(2)) or [None, None])[1]
+    last, vwap, vol = g("last_price"), g("vwap_price"), g("volume")
+    if last in (None, "null") or vwap in (None, "null"):
+        return None
+    return dict(datum=m.group(1), zadnja=float(last), vwap=float(vwap), dionica=float(vol or 0), trades=int(g("num_trades") or 0))
+
+
 # ---------------------------------------------------------------- NAV
 _AZ_TOKEN = None
 def _az_token():
@@ -71,7 +85,8 @@ def nav_series(fund, frm, to):
         d = json.loads(_get(f"https://www.pbzco-fond.hr/api/wsdl/get-nav?fond_id={src['pbz']}&dateFrom={frm}&dateTo={to}", tries=1, timeout=20))
         return {x["datum"][:10]: float(x["NAV"]) for x in d["data"]["NAVrez"]}
     if "rf" in src:
-        d = json.loads(_get(f"https://www.rmf.hr/Ajax.aspx?action=nav&sifra={src['rf']}&tmpDateFrom={_d(frm)}&tmpDateTo={_d(to)}"))
+        # rmf.hr povremeno ne odgovori (~1 od 7 pokretanja) → više kraćih pokušaja umjesto 3 × 60 s
+        d = json.loads(_get(f"https://www.rmf.hr/Ajax.aspx?action=nav&sifra={src['rf']}&tmpDateFrom={_d(frm)}&tmpDateTo={_d(to)}", tries=5, timeout=25))
         return {_dmy(x["Datum"]): float(x["ValueEur"]) for x in d["VrijednostUdjelaVM"]}
     raise KeyError(fund)
 

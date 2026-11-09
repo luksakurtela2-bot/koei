@@ -100,6 +100,16 @@ def update(status, quick=False):
             status[f"ZSE {sym}"] = "ok"
         except Exception as e:
             status[f"ZSE {sym}"] = f"greška: {e}"
+    # današnja cijena tijekom trgovanja (zse.hr, kasni ~15 min); REST povijest dan dodaje tek nakon zatvaranja
+    try:
+        lv = S.zse_live("KOEI")
+        zg = zagreb_now()
+        if lv:
+            lv["vrijeme"] = (zg - timedelta(minutes=15)).strftime("%H:%M")
+        (D / "zse_KOEI_uzivo.json").write_text(json.dumps(lv, ensure_ascii=False), encoding="utf-8")
+        status["ZSE KOEI danas"] = f"ok ({lv['datum']}, {lv['trades']} transakcija)" if lv else "ok (danas još nema trgovanja)"
+    except Exception as e:
+        status["ZSE KOEI danas"] = f"greška: {e}"
     if quick:
         return []
     nav = {(r["datum"], r["fond"]): r["nav_eur"] for r in read_csv(D / "nav.csv")}
@@ -386,6 +396,11 @@ def compute(status):
                 ct[r["date"]] = dict(vwap=float(r["vwap"]) / k, last=float(r["last"] or r["vwap"]) / k,
                                      volume=float(r["volume"]) * k, turnover=float(r["turnover"]))
         px[sym] = (ct, blk)
+    lvp = D / "zse_KOEI_uzivo.json"
+    lv = json.loads(lvp.read_text(encoding="utf-8") or "null") if lvp.exists() else None
+    if not live and lv and lv.get("datum") == today and before_close and today not in px["KOEI"][0]:
+        k = sf("KOEI", today)
+        live = dict(datum=today, zadnja=lv["zadnja"] / k, vwap=lv["vwap"] / k, dionica=lv["dionica"] * k, vrijeme=lv["vrijeme"])
     KO, BLK = px["KOEI"]
     days = sorted(KO)
     NAV = {}

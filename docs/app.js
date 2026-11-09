@@ -336,9 +336,13 @@ function renderOthers(D) {
 function renderMethod(D) {
   const st = Object.entries(D.izvori_status || {});
   const bad = st.filter(([, v]) => !String(v).startsWith("ok"));
-  // PBZ CO NAV s GitHuba nije dostupan (poznato); procjena se označava tiho u kartici fonda
-  const realBad = bad.filter(([k]) => !k.startsWith("NAV PBZ"));
-  if (realBad.length) $(".hero").insertAdjacentHTML("beforeend", `<div class="warn">Zadnje osvježavanje nije dohvatilo: ${realBad.map(([k]) => esc(k)).join(", ")}. Prikazani su zadnji dostupni podaci.</div>`);
+  // NAV: neuspio dohvat bitan je samo ako je NAV fonda zbog toga zastario – to javlja upozorenje „Stariji NAV” (fondovi B);
+  // PBZ CO NAV s GitHuba nije dostupan (poznato), stiže s lokalnog računala ili se procjenjuje
+  const LBL = { "ZSE KOEI": "cijene KOEI (ZSE)", "ZSE KODT": "cijene KODT (ZSE)", "ZSE KODT2": "cijene KODT2 (ZSE)", "ZSE KOEI danas": "današnja cijena KOEI (zse.hr)",
+    "MojeDionice KOEI": "pozicije KOEI (SKDD)", "MojeDionice KODT": "pozicije KODT (SKDD)",
+    "MAR obavijesti": "obavijesti o transakcijama (ZSE)", "MAR ↔ SKDD": "usklađenost obavijesti i SKDD-a" };
+  const realBad = bad.filter(([k]) => !k.startsWith("NAV "));
+  if (realBad.length) $(".hero").insertAdjacentHTML("beforeend", `<div class="warn">Zadnje osvježavanje nije dohvatilo: ${realBad.map(([k]) => esc(LBL[k] || k)).join(", ")}. Prikazani su zadnji dostupni podaci.</div>`);
   $("#method").innerHTML = `
   <p><b>Limit.</b> Obvezni mirovinski fond A ili B smije u dionice jednog izdavatelja uložiti najviše 5 % neto imovine (ZOMF čl. 127. st. 2.; C: 3 %). Kad udio prijeđe limit bez kupnje (rast cijene ili pad ostatka portfelja – prema uobičajenom tumačenju čl. 135. st. 2.), fond ga mora uskladiti u razumnom roku, najviše 3 mjeseca, uz moguće produljenje HANFA-e za još 3. Grupa KOEI + KODT smije najviše 10 %. Vlasnički limiti (20 % po fondu) ne ovise o cijeni.</p>
   <p><b>Izračun.</b> Udio = broj dionica × dnevni VWAP kontinuiranog trgovanja na ZSE (bez blokova i OTC-a) ÷ dnevni NAV fonda. Fondovi vrednuju KOEI po tom VWAP-u (provjereno za PBZ CO, AZ i Erste na više krajeva mjeseci, uključujući dane s blok-transakcijama). Višak = dionice − 5 % × NAV ÷ VWAP. Kod scenarija i praga cijene NAV raste zajedno s vlastitom pozicijom KOEI.</p>
