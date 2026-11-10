@@ -42,7 +42,9 @@ OK = {"da", "razlika", "mar"}        # pozicije iz stvarnih transakcija (ne izve
 MAR_OD = "2025-11-01"                 # MAR obavijesti fondova (eho.zse.hr) prate se od ovog datuma objave
 # PBZ CO prijavljivao je transakcije jer je Rosa Marić bila u NO Končara; ostavka 6. 11. 2026. (eho 69640, objavljeno 9. 11.)
 # → za trgovine nakon toga obavijesti više ne treba očekivati (provjera MAR ↔ SKDD vrijedi samo do tog dana)
-MAR_DO = {"PBZ_B": "2026-11-06", "PBZ_A": "2026-11-06"}
+# 6. 11. (dan ostavke): SKDD −465, obavijest −349 → 116 dionica vjerojatno prodano nakon ostavke, bez obveze prijave;
+# zato se provjera zaključuje s 5. 11. (SKDD Prvih 10, 10. 11. 2026.: PBZ CO B 233.560)
+MAR_DO = {"PBZ_B": "2026-11-05", "PBZ_A": "2026-11-05"}
 
 
 # ================================================================ pomoćno
