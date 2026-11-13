@@ -43,11 +43,12 @@ function render(D) {
   const gen = new Date(D.generirano);
   $("#upd").innerHTML = `${D.koei_uzivo ? `cijena u ${D.koei_uzivo.vrijeme}` : `VWAP ${dt(k.datum)}`}<br>osvježeno ${gen.getDate()}. ${gen.getMonth() + 1}. u ${gen.toLocaleTimeString("hr-HR", { hour: "2-digit", minute: "2-digit" })}`;
 
-  // hero – po zadnjoj cijeni (tijekom trgovanja "sada", inače zadnja zaključna); NAV ostatka portfelja s zadnjeg datuma
+  // hero – po VWAP-u kontinuiranog trgovanja (tako fondovi vrednuju KOEI u NAV-u): tijekom trgovanja današnji VWAP do sada,
+  // inače VWAP zadnjeg dana trgovanja; zaključna cijena za limit nije bitna. NAV ostatka portfelja s zadnjeg datuma
   const navDate = B.map((f) => f.nav_date).sort().pop() || k.datum;
   const L = D.koei_uzivo;
-  const pc = L ? L.zadnja : k.zadnja;
-  const pcLbl = L ? `cijenu sada (${L.vrijeme}, ${eur(pc, 2)})` : `zadnju zaključnu cijenu (${dt(k.datum)}, ${eur(pc, 2)})`;
+  const pc = L ? L.vwap : k.vwap;
+  const pcLbl = L ? `današnji VWAP do ${L.vrijeme} (${eur(pc, 2)})` : `VWAP ${dt(k.datum)} (${eur(pc, 2)})`;
   const S0 = scenario(pc);
   const sellers = S0.rows.filter((x) => x.n5 > 0).sort((a, b) => b.n5 - a.n5);
   const pd = (f) => f.potvrdeno_do || f.dionica_trg;   // do kojeg je dana trgovanja pozicija potvrđena
@@ -59,13 +60,13 @@ function render(D) {
   const az = B.find((f) => f.id === "AZ_B");
   const minPrag = Math.min(...B.filter((f) => f.dionica > 0 && f.prag_cijena).map((f) => f.prag_cijena));
   $("#h1").innerHTML = sellers.length
-    ? `Uz ${L ? "cijenu sada" : "zadnju cijenu"} mirovinci moraju prodati još <span class="big">${fmt(S0.t5)}</span> dionica KOEI`
-    : "Uz zadnju cijenu nijedan fond ne mora prodavati KOEI";
+    ? `Uz ${L ? "današnji VWAP" : "zadnji VWAP"} mirovinci moraju prodati još <span class="big">${fmt(S0.t5)}</span> dionica KOEI`
+    : `Uz ${L ? "današnji VWAP" : "zadnji VWAP"} nijedan fond ne mora prodavati KOEI`;
   const rows = sellers.map((x) => `<li><span>${NAME[x.id]}</span><b>${fmt(x.n5)}</b><small>${mil(x.n5 * pc)}, udio ${pct(x.w)}</small></li>`);
   if (az && !sellers.some((x) => x.id === "AZ_B")) rows.push(`<li class="zero"><span>AZ B</span><b>0</b><small>počinje prodavati tek iznad ${eur(az.prag_cijena, 1)}</small></li>`);
   $("#lede").innerHTML = (sellers.length
-    ? `<p>To je najmanje koliko trebaju prodati da im KOEI padne na 5 % neto imovine fonda (zakonski limit), uz ${pcLbl}: ${mil(S0.t5 * pc)} ili ${pct(S0.t5 / D.shares_out, 1)} Končara. Ako se spuste na 4,9 %, kao PBZ CO u prosincu 2025., to je ${fmt(S0.t49)} dionica.</p>`
-    : `<p>Ispod ${eur(minPrag, 1)} nitko ne mora prodavati; zadnja cijena je ${eur(pc, 2)}.</p>`)
+    ? `<p>To je najmanje koliko trebaju prodati da im KOEI padne na 5 % neto imovine fonda (zakonski limit), uz ${pcLbl}, po kojem fondovi vrednuju KOEI (zaključna cijena za limit nije bitna): ${mil(S0.t5 * pc)} ili ${pct(S0.t5 / D.shares_out, 1)} Končara. Ako se spuste na 4,9 %, kao PBZ CO u prosincu 2025., to je ${fmt(S0.t49)} dionica.</p>`
+    : `<p>Ispod ${eur(minPrag, 1)} nitko ne mora prodavati; ${pcLbl}.</p>`)
     + `<ul class="split">${rows.join("")}</ul>`
     + `<p class="small">NAV fondova od ${dt(navDate, true)}; pozicije iz SKDD-a${skD ? ` za trgovine do ${dt(skD, true)}` : ""}${marF.length ? `, a za ${marF.map((f) => NAME[f.id]).join(" i ")} iz obavijesti o transakcijama na ZSE (trgovine do ${dt(pd(marF[0]), true)})` : ""}`.replace(/\.?$/, ".")
     + `${ceka.length ? ` ${ceka.map((x) => `Prema SKDD-u ${NAME[x.fond]} je ${x.od === x.do ? dt(x.do) : `${dt(x.od)}–${dt(x.do)}`} ${x.skdd - x.mar < 0 ? "prodao" : "kupio"} ${fmt(Math.abs(x.skdd - x.mar))} dionica; obavijest s cijenom još nije objavljena (rok ${dt(x.rok)}).`).join(" ")}` : ""}`
@@ -104,15 +105,16 @@ function renderPrices(D, B) {
   const navDate = B.map((f) => f.nav_date).sort().pop();
   if (!hold.length) { $("#ladder").innerHTML = ""; return; }
   const min = hold[0];
-  const cur = L ? L.zadnja : k.zadnja;
-  const state = cur < min.prag_cijena ? `Uz sadašnju cijenu (${eur(cur, 2)}) nitko ne mora prodavati.`
-    : `Uz sadašnju cijenu (${eur(cur, 2)}) prodaju ${hold.filter((f) => cur >= f.prag_cijena).map((f) => NAME[f.id]).join(" i ")}.`;
+  const cur = L ? L.vwap : k.vwap;
+  const curT = L ? `današnji VWAP do ${L.vrijeme}` : `VWAP ${dt(k.datum)}`;
+  const state = cur < min.prag_cijena ? `Uz ${curT} (${eur(cur, 2)}) nitko ne mora prodavati.`
+    : `Uz ${curT} (${eur(cur, 2)}) prodaju ${hold.filter((f) => cur >= f.prag_cijena).map((f) => NAME[f.id]).join(" i ")}.`;
   $("#ladder").innerHTML = `<p class="floor">Ispod <b>${eur(min.prag_cijena, 1)}</b> nitko ne mora prodavati.</p>
     <ol class="steps">${hold.map((f) => `<li><span>od <b>${eur(f.prag_cijena, 1)}</b></span><span>prodaje ${NAME[f.id]}</span></li>`).join("")}</ol>
     <p class="state">${state}</p>`;
   $("#px-note").textContent = `Količine do 5 % NAV-a po fondu. Pozicije uključuju sve prodaje koje SKDD već pokazuje i, za PBZ CO, prodaje iz njegovih obavijesti na ZSE; NAV je od ${dt(navDate, true)}; tablica se osvježava svaki sat tijekom trgovanja.`;
   // sažeta tablica (~8 redaka): pragovi fondova, sadašnja cijena i okrugle cijene po 50 € između; ostalo na klik
-  const curRow = L ? { c: L.zadnja, t: `sada (${L.vrijeme})`, cls: "now" } : { c: k.zadnja, t: `zadnja zaključna (${dt(k.datum)})`, cls: "now" };
+  const curRow = L ? { c: L.vwap, t: `VWAP danas do ${L.vrijeme}`, cls: "now" } : { c: k.vwap, t: `VWAP ${dt(k.datum)}`, cls: "now" };
   const special = [curRow, ...hold.map((f) => ({ c: f.prag_cijena, t: `ovdje počinje ${NAME[f.id]}`, cls: "trig" }))];
   const far = (c) => special.every((r) => Math.abs(r.c - c) > 15);
   const top = Math.max(cur, hold.at(-1).prag_cijena) + 100;
