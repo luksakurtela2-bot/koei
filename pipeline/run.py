@@ -223,7 +223,10 @@ def update_mar(status):
         status["MAR obavijesti"] = (f"ok (zadnja {last[:10]})" if not (bad or errs) else
                                     f"greška: ručno provjeriti {', '.join([r['objavljeno'][:10] + ' ' + r['provjera'] for r in bad] + errs)}")
     except Exception as e:
-        status["MAR obavijesti"] = f"greška: {e}"
+        # eho.zse.hr povremeno ne odgovori; dosad pročitane obavijesti ostaju, sljedeće osvježavanje pokušava ponovno
+        mreza = isinstance(e, (TimeoutError, OSError)) or "timed out" in str(e)
+        last = max((r["objavljeno"] for r in P if r["fond"]), default="–")
+        status["MAR obavijesti"] = f"ok (zadnja {last[:10]}; eho.zse.hr ovaj put nije odgovorio)" if mreza else f"greška: {e}"
 
 
 def units(r, papir):
