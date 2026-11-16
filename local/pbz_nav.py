@@ -19,7 +19,8 @@ def log(msg):
 
 
 def git(*args):
-    return subprocess.run(["git", "-C", str(REPO), *args], capture_output=True, text=True, timeout=120)
+    return subprocess.run(["git", "-C", str(REPO), *args], capture_output=True, text=True, timeout=120,
+                          creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))   # bez bljeska konzole (pythonw → git.exe)
 
 
 def main():
