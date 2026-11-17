@@ -147,6 +147,8 @@ function renderGauges(B) {
     if (f.status === "iznad") {
       facts.push(`<span class="x">višak <b>${fmt(f.visak5)}</b> dionica uz VWAP ${dt(f.nav_date)} (${eur(f.vwap, 2)})</span>`);
       facts.push(`<span>iznad od <b>${f.iznad_od_pocetak_povijesti ? "≤ " : ""}${dt(f.iznad_od)}</b>, ${f.iznad_dana} trg. dana</span>`);
+      const u = f.uskladen;
+      if (u && u.prodaja) facts.push(`<span class="ok">usklađen <b>${dt(u.datum)}</b> (${pct(u.udio, 2)} uz VWAP${u.procjena ? ", procjena" : ""}) prodajom – rok teče iznova od ${dt(f.iznad_od)}</span>`);
       const rani = f.rok_3m_rani && f.rok_3m_rani !== f.rok_3m ? dt(f.rok_3m_rani) + "–" : "";
       facts.push(`<span>rok ~<b>${rani}${dt(f.rok_3m)}</b> <button class="info" type="button" aria-label="Kako se procjenjuje rok" data-tip="Procjena: 3 mjeseca od zadnjeg prelaska 5 % (ZOMF čl. 135.).${rani ? ` Raniji datum vrijedi ako se kratki padovi do 0,02 postotna boda ispod 5 % ne računaju kao prekid.` : ""} HANFA može produljiti za još 3 mjeseca (~${dt(f.rok_6m, true)}). Zakon ne kaže od kojeg se dana računa; 2024./25. oba su fonda bila iznad 5 % dulje od 3 mjeseca.">?</button></span>`);
     } else {

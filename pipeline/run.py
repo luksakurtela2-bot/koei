@@ -485,6 +485,17 @@ def compute(status):
         ser = raw.get(f, [])
         since = breach_start(dates, ser, lim * 100) if w > lim else None
         since_early = breach_start(dates, ser, lim * 100, tol=0.02) if w > lim else None
+        # zadnji dan ispod/na 5 % prije trenutnog prekoračenja – od tad se rok računa iznova
+        usk = None
+        if since and since != dates[0]:
+            i = dates.index(since)
+            j = next((k for k in range(i - 1, -1, -1) if ser[k] is not None), None)
+            if j is not None:
+                dj = dates[j]
+                prodao = j > 0 and hold("KOEI", f, dj)[0] < hold("KOEI", f, dates[j - 1])[0]
+                usk = dict(datum=dj, udio=ser[j] / 100, prodaja=prodao, procjena=bool(approx[f][j]))
+                if prodao:          # spušten ispod 5 % prodajom, ne kratkim padom cijene → nema ranijeg roka
+                    since_early = since
         above_days = sum(1 for d, v in zip(dates, ser) if since and d >= since and v is not None)
         recent_above = [d for d, v in list(zip(dates, ser))[-60:] if v is not None and v > lim * 100] if w <= lim else []
         chg = None
@@ -500,7 +511,7 @@ def compute(status):
             visak5=max(0.0, h - lim * nav / vw) if w > lim else 0.0,
             visak49=max(0.0, h - (lim - 0.001) * nav / vw) if w > lim else 0.0,
             iznad_od=since, iznad_od_rani=since_early, iznad_od_pocetak_povijesti=bool(since and since == dates[0]),
-            iznad_dana=above_days, rok_3m=add_months(since, 3) if since else None,
+            iznad_dana=above_days, uskladen=usk, rok_3m=add_months(since, 3) if since else None,
             rok_3m_rani=add_months(since_early, 3) if since_early else None, rok_6m=add_months(since, 6) if since else None,
             nedavno_iznad=recent_above, zadnja_promjena=chg,
             status=("iznad" if w > lim else "blizu" if w > lim - 0.002 else "ispod") if h else "nema"))
